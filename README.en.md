@@ -4,7 +4,7 @@ English | [中文](./README.md)
 
 ## Maintenance discontinued
 
-Reproduced locally. From a technical perspective, this kind of check is not difficult to get past. However, the model credits come with restrictions on where they can be used. WorkBuddy has made clear that it wants to distinguish its official client from third-party access, and this project respects that boundary and will not continue adapting to these checks. Using the official WorkBuddy client is, of course, the safest option.
+WorkBuddy recently introduced channel verification for third-party access. From a technical perspective, this kind of check is not difficult to get past. However, the model credits come with restrictions on where they can be used. WorkBuddy has made clear that it wants to distinguish its official client from third-party access, and this project respects that boundary and will not continue adapting to these checks. Using the official WorkBuddy client is, of course, the safest option.
 
 Due to limited personal time and energy, this project is no longer maintained, effective immediately. New feature requests and PRs will no longer be handled, and updates, compatibility fixes, and issue support will no longer be provided. The project repository is scheduled to go offline on **October 22, 2026 (Beijing time)**.
 
