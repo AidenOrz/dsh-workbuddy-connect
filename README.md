@@ -16,7 +16,7 @@
 
 **需要注意**：这是针对上游新增第三方客户端校验所做的字节级兼容改写，属于「猫鼠游戏」——上游一旦改为归一化开头的表述，中性拼写就需要重新评估。账号与接入风险仍按文末「免责声明」由使用者自行承担。
 
-**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，本次修复只存在于仓库 `main`（0.7.10）上；若要等正式包，请在 0.7.10 发布后按下方版本表安装。
+**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，本次修复只存在于仓库 `main`（0.7.10）上。想立即用上，可按「安装」章节里的 `github:` 命令从本仓库安装；也可以等 0.7.10 发布后按下方版本表安装。
 
 本仓库 `main` 现已领先上游一个合并提交；后续同步上游时请不要直接硬重置，以免丢掉这项修复。
 
@@ -50,17 +50,22 @@
 | 0.1.5 – 0.1.7 | 0.6.5 |
 
 <details>
-<summary>手动安装（命令行，仅 Web / TUI）</summary>
+<summary>手动安装（命令行：Web / TUI，以及 desktop 的 github 源）</summary>
 
 ```sh
-# Web（按实际内核固定版本，示例为 0.2.1-rc.2 → 0.7.9；也可用 github:corrinehu/dsh-workbuddy-connect 从源码安装）
+# Web（按实际内核固定版本，示例为 0.2.1-rc.2 → 0.7.9）
 dsh plugin --profile web add dsh-workbuddy-connect@0.7.9
 dsh web
 
 # TUI（示例为 0.1.x 内核；该 profile 需用 pnpm 11 安装，如 npx pnpm@11）
 dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
+
+# 需要包含分支合并修复的 0.7.10 时，从本仓库源码安装
+dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
+
+> **从本仓库源码安装**：`github:` 源由 pnpm 直接拉取本仓库 `main`（当前 `0.7.10`）。同一 profile 内包名唯一，这条命令会**替换**原有的 `dsh-workbuddy-connect` 条目（例如从 `0.7.8` 升到 `0.7.10`），不会并存。建议用桌面 App 自带 runtime 里的 `dsh` 执行——本机 Windows 桌面版实测通过；独立 CLI 对官方 Electron 版的 `desktop` profile 会被拒（见下方 Desktop 说明）。GitHub 不可达时需先给 git 配置代理。
 
 </details>
 

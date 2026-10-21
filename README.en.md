@@ -16,7 +16,7 @@ This repository has merged the upstream fix branch [`fix/channel-identity-opener
 
 **Caveat**: this is a byte-level compatibility rewrite aimed at a newly added third-party client check, so it is a cat-and-mouse fix — if upstream starts normalizing the opener, the neutral spelling needs to be revisited. Account and access risks remain the user's own, as stated in the "Disclaimer" at the end.
 
-**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.10). If you prefer the official package channel, install per the version table below once 0.7.10 is published.
+**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.10). To use it now, install from this repository with the `github:` command in the Install section; otherwise install per the version table below once 0.7.10 is published.
 
 This repository's `main` is now one merge commit ahead of upstream; when syncing upstream later, avoid a hard reset so the fix is not lost.
 
@@ -50,17 +50,22 @@ Core-to-plugin quick reference (full table in "Compatibility and release history
 | 0.1.5 – 0.1.7 | 0.6.5 |
 
 <details>
-<summary>Manual install (command line, Web / TUI only)</summary>
+<summary>Manual install (command line: Web / TUI, plus the desktop github: source)</summary>
 
 ```sh
-# Web (pin per your actual core — example: 0.2.1-rc.2 -> 0.7.9; or install from source via github:corrinehu/dsh-workbuddy-connect)
+# Web (pin per your actual core — example: 0.2.1-rc.2 -> 0.7.9)
 dsh plugin --profile web add dsh-workbuddy-connect@0.7.9
 dsh web
 
 # TUI (example for a 0.1.x core; that profile needs pnpm 11, e.g. npx pnpm@11)
 dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
+
+# For 0.7.10, which carries the branch-merge fix, install from this repository's source
+dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
+
+> **Installing from this repository**: the `github:` specifier makes pnpm fetch this repository's `main` (currently `0.7.10`). Package names are unique within a profile, so this command **replaces** the existing `dsh-workbuddy-connect` entry (e.g. 0.7.8 -> 0.7.10) rather than adding a second copy. Prefer the `dsh` bundled in the desktop app's runtime — verified on Windows Desktop here; a standalone CLI is rejected for the `desktop` profile of the official Electron build (see the Desktop note below). If GitHub is unreachable, configure a proxy for git first.
 
 </details>
 
