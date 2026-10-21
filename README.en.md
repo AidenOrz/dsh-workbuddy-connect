@@ -14,9 +14,11 @@ This repository has merged the upstream fix branch [`fix/channel-identity-opener
 - `prepareChatBody()` (international wire) and `prepareCnChatBody()` (probe / CN wire) run the same step, so both wires agree, and repeat calls are idempotent.
 - New `tests/channel-fingerprint.spec.ts` (11 cases); `lib/` is rebuilt from `src/` with `tsdown` in the same commit, per repository convention.
 
+**Follow-up (0.7.11)**: in practice #204 covered only `… powered by DeepSeek Harness.` The line DSH writes right after it — `You are a coding agent powered by <model> model.` — becomes the new opener and is rejected by the same check, so sessions still returned `HTTP 400 / code 11128`. 0.7.11 widens the match to both shapes (dotted model names such as `v4.1` included) and neutralizes every identity line stacked at the top of one system message.
+
 **Caveat**: this is a byte-level compatibility rewrite aimed at a newly added third-party client check, so it is a cat-and-mouse fix — if upstream starts normalizing the opener, the neutral spelling needs to be revisited. Account and access risks remain the user's own, as stated in the "Disclaimer" at the end.
 
-**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.10). To use it now, install from this repository with the `github:` command in the Install section; otherwise install per the version table below once 0.7.10 is published.
+**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.11). To use it now, install from this repository with the `github:` command in the Install section; otherwise install per the version table below once a new release is published.
 
 This repository's `main` is now one merge commit ahead of upstream; when syncing upstream later, avoid a hard reset so the fix is not lost.
 
@@ -61,11 +63,11 @@ dsh web
 dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 
-# For 0.7.10, which carries the branch-merge fix, install from this repository's source
+# For 0.7.11, which carries the branch-merge fix, install from this repository's source
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-> **Installing from this repository**: the `github:` specifier makes pnpm fetch this repository's `main` (currently `0.7.10`). Package names are unique within a profile, so this command **replaces** the existing `dsh-workbuddy-connect` entry (e.g. 0.7.8 -> 0.7.10) rather than adding a second copy. Prefer the `dsh` bundled in the desktop app's runtime — verified on Windows Desktop here; a standalone CLI is rejected for the `desktop` profile of the official Electron build (see the Desktop note below). If GitHub is unreachable, configure a proxy for git first.
+> **Installing from this repository**: the `github:` specifier makes pnpm fetch this repository's `main` (currently `0.7.11`). Package names are unique within a profile, so this command **replaces** the existing `dsh-workbuddy-connect` entry (e.g. 0.7.8 -> 0.7.11) rather than adding a second copy. Prefer the `dsh` bundled in the desktop app's runtime — verified on Windows Desktop here; a standalone CLI is rejected for the `desktop` profile of the official Electron build (see the Desktop note below). If GitHub is unreachable, configure a proxy for git first.
 
 </details>
 
@@ -181,6 +183,7 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 Release history (full records at [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)):
 
+- **0.7.11**: widens the channel-fingerprint rewrite to the per-model identity line (`You are a coding agent powered by <model> model.`, dotted model names included) and neutralizes every identity line stacked at the top of one system message; fixes the `HTTP 400 / code 11128` still seen after 0.7.10.
 - **0.7.10**: fixes the CN gateway's channel check on the fixed DSH opener (a system message starting with that sentence returned `HTTP 400 / code 11128`) by rewriting the opening sentence to a neutral one, for both string and array content shapes (PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204), by @Elycheng).
 - **0.7.9**: restores the international edition's maximum-context switch on DSH 0.2.1-rc.2, including delayed initialization and persistent settings (PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172), by @1Dreamer666); avoids fetch-blocked local ports that could cause international-edition 502 errors (PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164), by @Xiong-Ziyi); combines credit packages with the same name to reduce repeated entries.
 - **0.7.8**: adapts to DSH 0.2.1-rc.2; bundles the official atomic-write helper instead of relying on host module exposure; refreshes the China catalog snapshot and distinguishes Hy3 / Hy3-X; improves probe result labels and fixes the credit-refresh placement and tooltip. Thanks to @chenpiyanghappy for PR [#156](https://github.com/corrinehu/dsh-workbuddy-connect/pull/156).

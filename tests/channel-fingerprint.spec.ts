@@ -28,6 +28,8 @@ const CREDENTIAL: WorkBuddyCredential = {
 }
 
 const FINGERPRINT = 'You are an AI agent powered by DeepSeek Harness.'
+/** The per-model line DSH writes right after {@link FINGERPRINT}. */
+const MODEL_FINGERPRINT = 'You are a coding agent powered by the deepseek-v4.1-flash model.'
 
 /** A minimal Response-like object for the wire assertions below. */
 function fakeResponse(body: string, ok = true, status = 200): Response {
@@ -121,6 +123,42 @@ describe('channel fingerprint neutralization', () => {
       messages: [{ role: 'system', content: text }, { role: 'user', content: 'hi' }],
     }))
     expect(messagesOf(prepared)[0]?.['content']).toBe(text)
+  })
+
+  it('rewrites the per-model coding-agent sentence when it opens the message', () => {
+    // After the Harness sentence is neutralized this line becomes the opener,
+    // and it is rejected on its own — #204 missed it, a real session stayed at
+    // 400. The model name carries dots (`v4.1`), so a dot-free scan would miss
+    // it even with the tail widened to `model`.
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'deepseek-v4.1-flash',
+      messages: [{ role: 'system', content: `${MODEL_FINGERPRINT}\n\nBe brief.` }],
+    }))
+    expect(messagesOf(prepared)[0]?.['content']).toBe('You are an AI agent.\n\nBe brief.')
+  })
+
+  it('rewrites both stacked identity lines DSH writes at the top', () => {
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'deepseek-v4.1-flash',
+      messages: [{ role: 'system', content: `${FINGERPRINT}\n${MODEL_FINGERPRINT}\n\nBe brief.` }],
+    }))
+    expect(messagesOf(prepared)[0]?.['content'])
+      .toBe('You are an AI agent.\nYou are an AI agent.\n\nBe brief.')
+  })
+
+  it('leaves an unanchored model sentence and a Claude phrasing alone', () => {
+    const unanchored = `Context first.\n${MODEL_FINGERPRINT}`
+    const claude = 'You are an AI agent powered by Claude.'
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'hy3',
+      messages: [
+        { role: 'system', content: unanchored },
+        { role: 'system', content: claude },
+      ],
+    }))
+    const messages = messagesOf(prepared)
+    expect(messages[0]?.['content']).toBe(unanchored)
+    expect(messages[1]?.['content']).toBe(claude)
   })
 
   it('leaves neighboring identity phrasings and non-system roles untouched', () => {

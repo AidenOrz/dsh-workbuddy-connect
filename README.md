@@ -14,9 +14,11 @@
 - `prepareChatBody()`（国际版线路）与 `prepareCnChatBody()`（探测 / 国内版线路）执行同一步改写，两条线路行为一致，且重复调用幂等。
 - 新增 `tests/channel-fingerprint.spec.ts`（11 例）；`lib/` 按仓库惯例由 `tsdown` 从 `src/` 重建，与源码同一提交。
 
+**后续修正（0.7.11）**：实测发现 #204 只覆盖 `… powered by DeepSeek Harness.` 这一种形态。DSH 紧跟其后的 `You are a coding agent powered by <模型> model.` 会成为新的开头句，被同样的渠道校验拦下，会话仍报 `HTTP 400 / code 11128`。0.7.11 把匹配扩到这两种形态（模型名里的 `v4.1` 这类点号也纳入扫描），并归一化同一条 system 消息开头连续堆叠的多条身份句。
+
 **需要注意**：这是针对上游新增第三方客户端校验所做的字节级兼容改写，属于「猫鼠游戏」——上游一旦改为归一化开头的表述，中性拼写就需要重新评估。账号与接入风险仍按文末「免责声明」由使用者自行承担。
 
-**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，本次修复只存在于仓库 `main`（0.7.10）上。想立即用上，可按「安装」章节里的 `github:` 命令从本仓库安装；也可以等 0.7.10 发布后按下方版本表安装。
+**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，本次修复只存在于仓库 `main`（0.7.11）上。想立即用上，可按「安装」章节里的 `github:` 命令从本仓库安装；也可以等新版发布后按下方版本表安装。
 
 本仓库 `main` 现已领先上游一个合并提交；后续同步上游时请不要直接硬重置，以免丢掉这项修复。
 
@@ -61,11 +63,11 @@ dsh web
 dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 
-# 需要包含分支合并修复的 0.7.10 时，从本仓库源码安装
+# 需要包含分支合并修复的 0.7.11 时，从本仓库源码安装
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-> **从本仓库源码安装**：`github:` 源由 pnpm 直接拉取本仓库 `main`（当前 `0.7.10`）。同一 profile 内包名唯一，这条命令会**替换**原有的 `dsh-workbuddy-connect` 条目（例如从 `0.7.8` 升到 `0.7.10`），不会并存。建议用桌面 App 自带 runtime 里的 `dsh` 执行——本机 Windows 桌面版实测通过；独立 CLI 对官方 Electron 版的 `desktop` profile 会被拒（见下方 Desktop 说明）。GitHub 不可达时需先给 git 配置代理。
+> **从本仓库源码安装**：`github:` 源由 pnpm 直接拉取本仓库 `main`（当前 `0.7.11`）。同一 profile 内包名唯一，这条命令会**替换**原有的 `dsh-workbuddy-connect` 条目（例如从 `0.7.8` 升到 `0.7.11`），不会并存。建议用桌面 App 自带 runtime 里的 `dsh` 执行——本机 Windows 桌面版实测通过；独立 CLI 对官方 Electron 版的 `desktop` profile 会被拒（见下方 Desktop 说明）。GitHub 不可达时需先给 git 配置代理。
 
 </details>
 
@@ -182,6 +184,7 @@ llm-workbuddy:
 
 历次更新（完整记录见 [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)）：
 
+- **0.7.11**：把渠道指纹改写扩到 per-model 身份句（`You are a coding agent powered by <模型> model.`，模型名含点号），并归一化同一 system 消息开头连续堆叠的身份句；修复 0.7.10 之后仍出现的 `HTTP 400 / code 11128`。
 - **0.7.10**：修复国内网关对 DSH 固定开场白的渠道校验（system 消息以此句开头即返回 `HTTP 400 / code 11128`），将该开场句改写为中性表述，覆盖字符串与数组两种 `content` 形态（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，by @Elycheng）。
 - **0.7.9**：恢复 DSH 0.2.1-rc.2 上国际版最大上下文窗口开关，修复延迟初始化及设置持久化（PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172)，by @1Dreamer666）；避免本地服务绑定到 fetch 禁用端口导致国际版 502（PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164)，by @Xiong-Ziyi）；同名积分包合并展示，减少重复条目。
 - **0.7.8**：适配 DSH 0.2.1-rc.2；将官方原子写入工具打包到插件，避免依赖宿主暴露该模块；更新国内模型目录快照，区分 Hy3 / Hy3-X；优化推理检测结果展示，调整积分刷新按钮位置并修正悬停提示。感谢 @chenpiyanghappy 的 PR [#156](https://github.com/corrinehu/dsh-workbuddy-connect/pull/156)。

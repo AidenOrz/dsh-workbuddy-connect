@@ -574,20 +574,28 @@ export function prepareChatBody(source: string): string {
 }
 
 /**
- * The Harness identity sentence the CN gateway's channel verification rejects
- * at the **start** of a system message.
+ * The identity sentences the CN gateway's channel verification rejects at the
+ * **start** of a system message.
  *
- * Measured 2026-10-20 and re-measured 2026-10-21: a body whose system message
- * opens with this sentence is answered HTTP 400 / code 11128 /
- * 「请求被拦截，请重新发送」, while the same body with only that sentence
- * rewritten succeeds. The match is anchored and sentence-scoped on purpose —
- * the same text later in the prompt (or with any prose before it) passes, and
- * every neighbouring identity phrasing (`You are an AI agent`,
- * `You are a helpful assistant`, `… powered by Claude`) passes too. So this is
- * a prefix rule about one product name, not a general "system prompts are
- * suspicious" rule, and the rewrite is kept to exactly that prefix.
+ * Two shapes are known (measured 2026-10-20 → 2026-10-21):
+ *
+ *   You are an AI agent powered by DeepSeek Harness.
+ *   You are a coding agent powered by the deepseek-v4.1-flash model.
+ *
+ * The second one is emitted per model / per agent kind, and it turns into the
+ * system message's opening line on its own once the first is neutralized, so
+ * it has to be rewritten too — #204 only covered the `Harness` sentence and a
+ * real session still answered 400 / 11128.
+ *
+ * Its model name can contain dots (`deepseek-v4.1-flash`), so the scan between
+ * `powered by` and the tail cannot exclude dots; the tail is anchored on
+ * `Harness` or `model` instead, and `(?=\s|$)` keeps the match inside one
+ * sentence. The match stays anchored at the start of a line on purpose — the
+ * same text later in the prompt (or with any prose before it) passes, and
+ * every neighbouring identity phrasing (`You are a helpful assistant`,
+ * `… powered by Claude`) passes too, so only this fingerprint is rewritten.
  */
-const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? agent powered by [^.\n]{1,60}Harness\.?/iu
+const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? agent powered by [^\n]{1,80}?(?:Harness|model)\.?(?=\s|$)/iu
 
 /**
  * A neutral stand-in for the rejected sentence: it keeps the "you are an agent"
@@ -596,9 +604,35 @@ const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? ag
  */
 const NEUTRAL_IDENTITY = 'You are an AI agent.'
 
-/** Rewrite the rejected leading identity sentence of one system string. */
+/**
+ * Rewrite the leading identity block of one system string.
+ *
+ * DSH writes the agent line and the per-model line back to back, so the block
+ * is every consecutive identity line at the top of the message (blank lines
+ * between them do not end it). Rewriting only the first line left the model
+ * sentence as the new opener, which is why a real session still got 400.
+ */
 function rewriteChannelIdentityLine(text: string): string {
-  return text.replace(CHANNEL_IDENTITY_PATTERN, NEUTRAL_IDENTITY)
+  const lines = text.split('\n')
+  let index = 0
+  let touched = false
+  while (index < lines.length) {
+    const line = lines[index] ?? ''
+    const rewritten = line.replace(CHANNEL_IDENTITY_PATTERN, NEUTRAL_IDENTITY)
+    if (rewritten === line) {
+      // A blank line (including a leading BOM / whitespace line) does not end
+      // the block; the first line of prose does.
+      if (line.trim() === '') {
+        index += 1
+        continue
+      }
+      break
+    }
+    lines[index] = rewritten
+    touched = true
+    index += 1
+  }
+  return touched ? lines.join('\n') : text
 }
 
 /**
