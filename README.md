@@ -2,13 +2,23 @@
 
 [English](./README.en.md) | 中文
 
-## 停止维护公告
+## 分支合并通知
 
-2026 年 10 月 20 日起，WorkBuddy 开始限制非官方客户端发出的请求。单从技术角度看，这类校验不难跨越。不过，送的模型额度既然附带了使用场地要求，WorkBuddy 已明确希望区分官方客户端与第三方接入，本项目尊重这一边界，不再继续适配。使用官方 WorkBuddy 客户端当然最安全。
+本仓库已把上游 `corrinehu/dsh-workbuddy-connect` 的修复分支 [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，作者 [@Elycheng](https://github.com/Elycheng)）合并进 `main`，合并提交 `0c9b269`，插件版本随之升到 **0.7.10**。
 
-同时，由于个人时间和精力有限，本项目即日起停止维护：不再处理新功能请求与 PR，不再提供更新、兼容性修复及问题支持。项目仓库计划于 **2026 年 10 月 22 日下线**。
+**起因**：2026 年 10 月 20 日起，国内网关对「system 消息以 `You are an AI agent powered by DeepSeek Harness.` 开头」的请求返回 `HTTP 400 / code 11128`，提示「请求被拦截，请重新发送」。这句话正是 DSH 注入每个 agent 请求的固定开场白，因此 WorkBuddy 分组下的全部模型同时失败，而官方 App 不受影响。
 
-非常感谢大家这段时间的使用、反馈和贡献，也谢谢每一位帮忙测试、排查问题和提交 PR 的朋友。特别高兴这个小插件曾给大家带来便利！
+**改动**：
+
+- `src/upstream.ts` 新增 `neutralizeChannelIdentity()`：把 system / developer 消息**开头**的该固定句改写为中性表述 `You are an AI agent.`。字符串 `content` 与数组形态的 `text` 部分都覆盖；长会话中因提示词更新产生的多条 system 消息全部改写；user 消息、tool 结果、句中重复以及 body 的其它字段保持原样。
+- `prepareChatBody()`（国际版线路）与 `prepareCnChatBody()`（探测 / 国内版线路）执行同一步改写，两条线路行为一致，且重复调用幂等。
+- 新增 `tests/channel-fingerprint.spec.ts`（11 例）；`lib/` 按仓库惯例由 `tsdown` 从 `src/` 重建，与源码同一提交。
+
+**需要注意**：这是针对上游新增第三方客户端校验所做的字节级兼容改写，属于「猫鼠游戏」——上游一旦改为归一化开头的表述，中性拼写就需要重新评估。账号与接入风险仍按文末「免责声明」由使用者自行承担。
+
+**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，本次修复只存在于仓库 `main`（0.7.10）上；若要等正式包，请在 0.7.10 发布后按下方版本表安装。
+
+本仓库 `main` 现已领先上游一个合并提交；后续同步上游时请不要直接硬重置，以免丢掉这项修复。
 
 ---
 
@@ -167,6 +177,7 @@ llm-workbuddy:
 
 历次更新（完整记录见 [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)）：
 
+- **0.7.10**：修复国内网关对 DSH 固定开场白的渠道校验（system 消息以此句开头即返回 `HTTP 400 / code 11128`），将该开场句改写为中性表述，覆盖字符串与数组两种 `content` 形态（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，by @Elycheng）。
 - **0.7.9**：恢复 DSH 0.2.1-rc.2 上国际版最大上下文窗口开关，修复延迟初始化及设置持久化（PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172)，by @1Dreamer666）；避免本地服务绑定到 fetch 禁用端口导致国际版 502（PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164)，by @Xiong-Ziyi）；同名积分包合并展示，减少重复条目。
 - **0.7.8**：适配 DSH 0.2.1-rc.2；将官方原子写入工具打包到插件，避免依赖宿主暴露该模块；更新国内模型目录快照，区分 Hy3 / Hy3-X；优化推理检测结果展示，调整积分刷新按钮位置并修正悬停提示。感谢 @chenpiyanghappy 的 PR [#156](https://github.com/corrinehu/dsh-workbuddy-connect/pull/156)。
 - **0.7.7**：适配 DSH 0.2.1-rc.1 内核：peer 收窄到 0.2.1-rc.1，插件自带的 `@earendil-works/pi-ai` 随内核升级到 1.3.0（profile 级历史遗留的 0.87.1 overrides 必须移除，否则插件无法加载）；修复国际版与国内版推理档位检测停留「检测未完成」——上游把档位拒绝码改拼为 `invalid_parameter_value`（[#143](https://github.com/corrinehu/dsh-workbuddy-connect/issues/143) / [#148](https://github.com/corrinehu/dsh-workbuddy-connect/issues/148)，PR [#145](https://github.com/corrinehu/dsh-workbuddy-connect/pull/145)）；修复中文 Windows 控制台下注册表缺键诊断因 GBK 编码被误判（zh-CN 实机验证）。

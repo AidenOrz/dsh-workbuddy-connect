@@ -2,13 +2,23 @@
 
 English | [中文](./README.md)
 
-## Maintenance discontinued
+## Branch merge notice
 
-Starting October 20, 2026, WorkBuddy began restricting requests from unofficial clients. From a technical perspective, this kind of check is not difficult to get past. However, the model credits come with restrictions on where they can be used. WorkBuddy has made clear that it wants to distinguish its official client from third-party access, and this project respects that boundary and will not continue adapting to these checks. Using the official WorkBuddy client is, of course, the safest option.
+This repository has merged the upstream fix branch [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204) (PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204), by [@Elycheng](https://github.com/Elycheng)) from `corrinehu/dsh-workbuddy-connect` into `main` (merge commit `0c9b269`); the plugin version is now **0.7.10**.
 
-Due to limited personal time and energy, this project is no longer maintained, effective immediately. New feature requests and PRs will no longer be handled, and updates, compatibility fixes, and issue support will no longer be provided. The project repository is scheduled to go offline on **October 22, 2026 (Beijing time)**.
+**Why**: since October 20, 2026 the CN gateway answers `HTTP 400 / code 11128` ("request blocked, please send again") to any request whose system message opens with `You are an AI agent powered by DeepSeek Harness.` — the fixed line DSH injects into every agent request — so every model in the WorkBuddy group failed at once, while the official app kept working.
 
-Many thanks to everyone who used the plugin, shared feedback, and contributed, especially those who helped test, investigate problems, and submit PRs. It has been a pleasure to see this little plugin make things easier for you!
+**Changes**:
+
+- `src/upstream.ts` gains `neutralizeChannelIdentity()`: it rewrites the rejected opening sentence of every system / developer message to the neutral `You are an AI agent.` String `content` and array-form `text` parts are both covered; long sessions that carry several system messages are all rewritten; user turns, tool results, a second occurrence inside the same string and every other body field stay untouched.
+- `prepareChatBody()` (international wire) and `prepareCnChatBody()` (probe / CN wire) run the same step, so both wires agree, and repeat calls are idempotent.
+- New `tests/channel-fingerprint.spec.ts` (11 cases); `lib/` is rebuilt from `src/` with `tsdown` in the same commit, per repository convention.
+
+**Caveat**: this is a byte-level compatibility rewrite aimed at a newly added third-party client check, so it is a cat-and-mouse fix — if upstream starts normalizing the opener, the neutral spelling needs to be revisited. Account and access risks remain the user's own, as stated in the "Disclaimer" at the end.
+
+**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.10). If you prefer the official package channel, install per the version table below once 0.7.10 is published.
+
+This repository's `main` is now one merge commit ahead of upstream; when syncing upstream later, avoid a hard reset so the fix is not lost.
 
 ---
 
@@ -166,6 +176,7 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 Release history (full records at [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)):
 
+- **0.7.10**: fixes the CN gateway's channel check on the fixed DSH opener (a system message starting with that sentence returned `HTTP 400 / code 11128`) by rewriting the opening sentence to a neutral one, for both string and array content shapes (PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204), by @Elycheng).
 - **0.7.9**: restores the international edition's maximum-context switch on DSH 0.2.1-rc.2, including delayed initialization and persistent settings (PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172), by @1Dreamer666); avoids fetch-blocked local ports that could cause international-edition 502 errors (PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164), by @Xiong-Ziyi); combines credit packages with the same name to reduce repeated entries.
 - **0.7.8**: adapts to DSH 0.2.1-rc.2; bundles the official atomic-write helper instead of relying on host module exposure; refreshes the China catalog snapshot and distinguishes Hy3 / Hy3-X; improves probe result labels and fixes the credit-refresh placement and tooltip. Thanks to @chenpiyanghappy for PR [#156](https://github.com/corrinehu/dsh-workbuddy-connect/pull/156).
 - **0.7.7**: adapts to the DSH 0.2.1-rc.1 core: peers narrow to 0.2.1-rc.1 and the plugin-bundled `@earendil-works/pi-ai` moves to 1.3.0 with it (a profile-level leftover 0.87.1 overrides entry must be removed, or the plugin fails to load).
