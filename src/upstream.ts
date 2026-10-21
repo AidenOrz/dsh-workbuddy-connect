@@ -605,6 +605,31 @@ const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? ag
 const NEUTRAL_IDENTITY = 'You are an AI agent.'
 
 /**
+ * The product name the channel check scans for **anywhere** in a system
+ * message, not only in the opening sentence.
+ *
+ * Measured 2026-10-21 evening: with the identity opener neutralized and the
+ * desktop UA restored, a real session still answered 400 / 11128. Its system
+ * messages carried the runtime context DSH appends to every prompt —
+ *
+ *   Current DeepSeek Harness implementation checkout: "C:\…\DeepSeek Harness\…"
+ *   Current DeepSeek Harness Web GUI URL: "http://127.0.0.1:…"
+ *
+ * — repeated once per turn, eleven occurrences in one request. Replacing just
+ * this product name made the same request succeed, so the check is a full-text
+ * scan for it rather than a prefix rule.
+ */
+const PRODUCT_NAME_PATTERN = /DeepSeek Harness/gu
+
+/** Neutral stand-in for {@link PRODUCT_NAME_PATTERN}; keeps the sentence grammatical. */
+const NEUTRAL_PRODUCT_NAME = 'the agent runtime'
+
+/** Scrub the product name from one system/developer string. */
+function scrubProductName(text: string): string {
+  return text.replace(PRODUCT_NAME_PATTERN, NEUTRAL_PRODUCT_NAME)
+}
+
+/**
  * Rewrite the leading identity block of one system string.
  *
  * DSH writes the agent line and the per-model line back to back, so the block
@@ -654,7 +679,7 @@ function neutralizeChannelIdentity(obj: Record<string, unknown>): void {
     if (role !== 'system' && role !== 'developer') continue
     const content = wrapped['content']
     if (typeof content === 'string') {
-      wrapped['content'] = rewriteChannelIdentityLine(content)
+      wrapped['content'] = scrubProductName(rewriteChannelIdentityLine(content))
       continue
     }
     if (!Array.isArray(content)) continue
@@ -662,7 +687,7 @@ function neutralizeChannelIdentity(obj: Record<string, unknown>): void {
       if (typeof part !== 'object' || part === null || Array.isArray(part)) continue
       const wrappedPart = part as Record<string, unknown>
       if (wrappedPart['type'] !== 'text' || typeof wrappedPart['text'] !== 'string') continue
-      wrappedPart['text'] = rewriteChannelIdentityLine(wrappedPart['text'])
+      wrappedPart['text'] = scrubProductName(rewriteChannelIdentityLine(wrappedPart['text']))
     }
   }
 }

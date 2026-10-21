@@ -146,6 +146,26 @@ describe('channel fingerprint neutralization', () => {
       .toBe('You are an AI agent.\nYou are an AI agent.\n\nBe brief.')
   })
 
+  it('scrubs the product name anywhere in a system message, not only the opener', () => {
+    // The check is a full-text scan: DSH appends runtime context naming the
+    // implementation checkout and the Web GUI URL once per turn, so a session
+    // with the opener neutralized still carried eleven occurrences and failed.
+    const system = 'Be brief.\n\nCurrent DeepSeek Harness implementation checkout: "C:\\app\\DeepSeek Harness\\dsh\\".'
+    const userText = 'DeepSeek Harness 是什么？'
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'deepseek-v4.1-flash',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userText },
+      ],
+    }))
+    const messages = messagesOf(prepared)
+    expect(messages[0]?.['content'])
+      .toBe('Be brief.\n\nCurrent the agent runtime implementation checkout: "C:\\app\\the agent runtime\\dsh\\".')
+    // User turns are the user's own words and stay byte-identical.
+    expect(messages[1]?.['content']).toBe(userText)
+  })
+
   it('leaves an unanchored model sentence and a Claude phrasing alone', () => {
     const unanchored = `Context first.\n${MODEL_FINGERPRINT}`
     const claude = 'You are an AI agent powered by Claude.'

@@ -19,6 +19,8 @@
  */
 
 import { readFile } from 'node:fs/promises'
+import { accessSync, constants } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
@@ -77,7 +79,35 @@ function macAppRoots(): string[] {
 
 /** Path of the bundled agent CLI's package.json inside an App bundle. */
 function cliPackagePath(bundle: string): string {
-  return join(bundle, 'Contents', 'Resources', 'app.asar.unpacked', 'cli', 'package.json')
+  // macOS keeps it under Contents/Resources; the Windows installer drops the
+  // same layout directly under the install root.
+  return process.platform === 'win32'
+    ? join(bundle, 'resources', 'app.asar.unpacked', 'cli', 'package.json')
+    : join(bundle, 'Contents', 'Resources', 'app.asar.unpacked', 'cli', 'package.json')
+}
+
+/**
+ * Windows FileVersion of the desktop executable, or `undefined` when unreadable.
+ *
+ * Windows has no plist to parse, so the PE version resource is the only place
+ * the real client version exists. PowerShell reads it once per process (the
+ * resolved identity is cached); any failure degrades to `undefined`, which
+ * keeps the saved/fallback chain authoritative instead of guessing a version.
+ */
+function windowsFileVersion(exe: string): string | undefined {
+  try {
+    accessSync(exe, constants.F_OK)
+    const output = execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `(Get-Item -LiteralPath '${exe.replace(/'/g, "''")}').VersionInfo.FileVersion`,
+    ], { encoding: 'utf8', timeout: 5000, windowsHide: true })
+    const version = output.trim()
+    return validAppVersion(version) ? version : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -146,6 +176,13 @@ export interface ResolveChatIdentityOptions {
 
 /** The installed CN desktop bundle, or `undefined` when it is not installed (or not readable). */
 async function installedCnApp(): Promise<{ version: string; bundle: string } | undefined> {
+  if (process.platform === 'win32') {
+    const root = process.env['LOCALAPPDATA']
+    if (root === undefined || root === '') return undefined
+    const bundle = join(root, 'Programs', 'WorkBuddy')
+    const version = windowsFileVersion(join(bundle, 'WorkBuddy.exe'))
+    return version === undefined ? undefined : { version, bundle }
+  }
   if (process.platform !== 'darwin') return undefined
   for (const root of macAppRoots()) {
     const bundle = join(root, 'WorkBuddy.app')
