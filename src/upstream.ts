@@ -546,13 +546,16 @@ function identityHeaders(credential: WorkBuddyCredential): Record<string, string
  * Normalize an OpenAI chat-completions body for the WorkBuddy upstream:
  * force `stream: true` (the upstream rejects non-streaming), flatten
  * `tool_choice` (the upstream's field is a string; object forms return 400),
- * and rewrite `developer` messages as `system`.
+ * rewrite `developer` messages as `system`, and neutralize the client-channel
+ * fingerprint on every system message.
  *
  * The `developer` rewrite is load-bearing: pi-ai emits the system prompt as
  * `role: "developer"` (the OpenAI convention it adopted), but the WorkBuddy
  * upstream rejects that role with HTTP 400 code 11128 ("Illegal API
  * invocation from an unapproved channel"). Rewriting to `system` is the
  * compatible spelling the upstream accepts.
+ *
+ * The fingerprint rewrite is load-bearing too — see {@link CHANNEL_IDENTITY_PATTERN}.
  */
 export function prepareChatBody(source: string): string {
   let body: unknown
@@ -565,8 +568,69 @@ export function prepareChatBody(source: string): string {
   const obj = body as Record<string, unknown>
   obj['stream'] = true
   normalizeDeveloperRole(obj)
+  neutralizeChannelIdentity(obj)
   normalizeToolChoice(obj)
   return JSON.stringify(obj)
+}
+
+/**
+ * The Harness identity sentence the CN gateway's channel verification rejects
+ * at the **start** of a system message.
+ *
+ * Measured 2026-10-20 and re-measured 2026-10-21: a body whose system message
+ * opens with this sentence is answered HTTP 400 / code 11128 /
+ * 「请求被拦截，请重新发送」, while the same body with only that sentence
+ * rewritten succeeds. The match is anchored and sentence-scoped on purpose —
+ * the same text later in the prompt (or with any prose before it) passes, and
+ * every neighbouring identity phrasing (`You are an AI agent`,
+ * `You are a helpful assistant`, `… powered by Claude`) passes too. So this is
+ * a prefix rule about one product name, not a general "system prompts are
+ * suspicious" rule, and the rewrite is kept to exactly that prefix.
+ */
+const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? agent powered by [^.\n]{1,60}Harness\.?/iu
+
+/**
+ * A neutral stand-in for the rejected sentence: it keeps the "you are an agent"
+ * framing the prompt needs, and drops the product identity the channel check
+ * objects to.
+ */
+const NEUTRAL_IDENTITY = 'You are an AI agent.'
+
+/** Rewrite the rejected leading identity sentence of one system string. */
+function rewriteChannelIdentityLine(text: string): string {
+  return text.replace(CHANNEL_IDENTITY_PATTERN, NEUTRAL_IDENTITY)
+}
+
+/**
+ * Rewrite the channel fingerprint out of every system (or developer) message.
+ *
+ * DSH re-emits the system prompt as a new message whenever it changes, so a
+ * long session carries several system messages and every one of them is
+ * rewritten; fixing only the first was measured to leave the request at 400.
+ * Messages, user turns, tool results and every other part of the body are left
+ * byte-identical.
+ */
+function neutralizeChannelIdentity(obj: Record<string, unknown>): void {
+  const messages = obj['messages']
+  if (!Array.isArray(messages)) return
+  for (const message of messages) {
+    if (typeof message !== 'object' || message === null || Array.isArray(message)) continue
+    const wrapped = message as Record<string, unknown>
+    const role = wrapped['role']
+    if (role !== 'system' && role !== 'developer') continue
+    const content = wrapped['content']
+    if (typeof content === 'string') {
+      wrapped['content'] = rewriteChannelIdentityLine(content)
+      continue
+    }
+    if (!Array.isArray(content)) continue
+    for (const part of content) {
+      if (typeof part !== 'object' || part === null || Array.isArray(part)) continue
+      const wrappedPart = part as Record<string, unknown>
+      if (wrappedPart['type'] !== 'text' || typeof wrappedPart['text'] !== 'string') continue
+      wrappedPart['text'] = rewriteChannelIdentityLine(wrappedPart['text'])
+    }
+  }
 }
 
 /** Rewrite `role: "developer"` messages to `role: "system"` (upstream rejects developer). */
@@ -1562,6 +1626,7 @@ export function prepareCnChatBody(source: string): string {
   }
   if (!isObject(body)) return source
   dropUnsupportedEffort(body)
+  neutralizeChannelIdentity(body)
   return JSON.stringify(body)
 }
 

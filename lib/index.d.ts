@@ -449,13 +449,16 @@ declare function regionOf(domain: string): WorkBuddyRegion;
  * Normalize an OpenAI chat-completions body for the WorkBuddy upstream:
  * force `stream: true` (the upstream rejects non-streaming), flatten
  * `tool_choice` (the upstream's field is a string; object forms return 400),
- * and rewrite `developer` messages as `system`.
+ * rewrite `developer` messages as `system`, and neutralize the client-channel
+ * fingerprint on every system message.
  *
  * The `developer` rewrite is load-bearing: pi-ai emits the system prompt as
  * `role: "developer"` (the OpenAI convention it adopted), but the WorkBuddy
  * upstream rejects that role with HTTP 400 code 11128 ("Illegal API
  * invocation from an unapproved channel"). Rewriting to `system` is the
  * compatible spelling the upstream accepts.
+ *
+ * The fingerprint rewrite is load-bearing too — see {@link CHANNEL_IDENTITY_PATTERN}.
  */
 declare function prepareChatBody(source: string): string;
 /** Provenance of one successful catalog fetch, surfaced by the status card. */
