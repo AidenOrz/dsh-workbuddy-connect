@@ -32,52 +32,54 @@ Brings the models available in your signed-in WorkBuddy / WorkBuddy AI desktop a
 
 **Prerequisite**: the WorkBuddy (CN) or WorkBuddy AI desktop app is installed and signed in on this machine. The plugin reuses the app's sign-in state and follows account switches automatically; the two never affect each other.
 
-**Recommended: let an Agent you already have do the install** — any assistant with terminal and file access (the DSH agent, Codex, Claude Code, Cursor, …). Paste this to it verbatim:
+The plugin version must match the DSH core — a mismatch fails to start DSH — and the Desktop app picks its plugin version by the bundled core. This repository is verified on **DSH `0.2.1-rc.2`** (Node 22+, pnpm 11):
 
-```text
-Please install and verify the DSH (DeepSeek Harness) plugin dsh-workbuddy-connect for me (project: https://github.com/corrinehu/dsh-workbuddy-connect).
-Start by reading the project README and confirming which interface I actually use (Web / Desktop / TUI) and its DSH core version — for the Desktop app, the bundled core, never the standalone CLI's version.
-Then install from the official npm package per the version mapping (0.2.1-rc.2 -> 0.7.9, 0.2.1-rc.1 -> 0.7.7, 0.2.0-rc.2 -> 0.7.6, rc.1 -> 0.7.0, 0.1.5-0.1.7 -> 0.6.5), preferring a locally supported non-market channel; on some Desktop distributions (the official Electron app in particular) the profile is app-managed and rules vary by distribution — check mine first, then explore its compliant install route, but never bypass its validation.
-Ask for my consent and make backups before changing any local files or configuration.
-After installing, verify the WorkBuddy group appears in the model picker and walk me through one short conversation.
-If the Desktop install still fails generation validation (e.g. the @types/retry false positive), report it honestly, reference upstream dataelement/dsh-desktop#688, and suggest switching to the standalone Web / TUI — do not modify dependency packages or bypass the check.
-```
-
-Core-to-plugin quick reference (full table in "Compatibility and release history" at the end):
-
-| DSH core | Recommended plugin |
+| DSH core | Plugin version |
 |---|---|
-| 0.2.1-rc.2 | 0.7.9 (npm latest) |
-| 0.2.1-rc.1 | 0.7.7 |
-| 0.2.0-rc.2 | 0.7.6 |
-| 0.2.0-rc.1 | 0.7.0 |
-| 0.1.5 – 0.1.7 | 0.6.5 |
+| `0.2.1-rc.2` | `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
+| `0.2.1-rc.1` | `0.7.7` |
+| `0.2.0-rc.2` | `0.7.6` |
+| `0.2.0-rc.1` | `0.7.0` |
+| `0.1.5` – `0.1.7` | `0.6.5` |
 
-<details>
-<summary>Manual install (command line: Web / TUI, plus the desktop github: source)</summary>
+### Desktop (Windows / macOS)
+
+Run this with the **`dsh` bundled in the desktop app's runtime**, not a standalone CLI — the official Electron build rejects a standalone CLI's `--profile desktop`.
 
 ```sh
-# Web (pin per your actual core — example: 0.2.1-rc.2 -> 0.7.9)
-dsh plugin --profile web add dsh-workbuddy-connect@0.7.9
-dsh web
-
-# TUI (example for a 0.1.x core; that profile needs pnpm 11, e.g. npx pnpm@11)
-dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
-dsh --profile dsh-tui
-
-# For 0.7.12, which carries the branch-merge fix, install from this repository's source
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-> **Installing from this repository**: the `github:` specifier makes pnpm fetch this repository's `main` (currently `0.7.12`). Package names are unique within a profile, so this command **replaces** the existing `dsh-workbuddy-connect` entry (e.g. 0.7.8 -> 0.7.12) rather than adding a second copy. Prefer the `dsh` bundled in the desktop app's runtime — verified on Windows Desktop here; a standalone CLI is rejected for the `desktop` profile of the official Electron build (see the Desktop note below). If GitHub is unreachable, configure a proxy for git first.
+- **`latest` on npm is still `0.7.9`, which does not contain the 2026-10-21 channel-check fix.** The command above installs `0.7.12` from this repository's `main`.
+- Package names are unique within a profile: the command **replaces** an already installed copy rather than adding a second one. To return to the npm build: `dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`.
+- Fully quit and restart the app afterwards — the plugin is loaded at startup.
+- The `github:` specifier is resolved by pnpm through `git ls-remote`; when GitHub is unreachable you get `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`, so configure a proxy for git and retry.
+- Verified here on Windows 11 + WorkBuddy `5.8.3` + DSH `0.2.1-rc.2`.
 
-</details>
+### Web / TUI
 
-> **TUI version pairing**: the terminal shell `@deepseek-harness-tui/dsh-tui` must be 0.10.0-beta.5 or newer — older versions fail at startup with this plugin installed (`events is not iterable`); manual reasoning-level detection exists on Web / Desktop only, not TUI.
+```sh
+# Web (example: core 0.2.1-rc.2 -> plugin 0.7.9)
+dsh plugin --profile web add dsh-workbuddy-connect@0.7.9
+dsh web
 
-> **Desktop**: on some Desktop distributions (the official Electron app in particular) the `desktop` profile is app-managed, and the official app rejects the standalone CLI's `--profile desktop`; other distributions may follow different rules, so check yours first and do not blindly use the standalone CLI's `--profile desktop`. An Agent may probe whether your distribution offers a compliant non-market install route, but that is not guaranteed to work; never blindly edit the app-managed directory or bypass its validation.
+# TUI (example: 0.1.x core -> plugin 0.6.5; that profile needs pnpm 11, e.g. npx pnpm@11)
+dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
+dsh --profile dsh-tui
+```
 
-**Verify**: after restarting the interface, the model picker shows the "WorkBuddy / WorkBuddy AI" group(s) (with only one app installed, check just that group), and a model picked from the group completes one short conversation with a normal reply — that is what a successful install means.
+> Web / TUI can also install `0.7.12` from `github:AidenOrz/dsh-workbuddy-connect`, but this repository is only verified on Desktop.
+> TUI version pairing: the terminal shell `@deepseek-harness-tui/dsh-tui` must be `0.10.0-beta.5` or newer — older versions fail at startup with this plugin installed (`events is not iterable`); manual reasoning-level detection exists on Web / Desktop only, not TUI.
+
+### Verify
+
+After restarting the interface, the model picker shows the "WorkBuddy / WorkBuddy AI" group(s) (with only one app installed, check just that group); a model picked from the group completes one short conversation with a normal reply — that is what a successful install means.
+
+### When the install fails
+
+- `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`: GitHub is unreachable; configure a proxy for git and retry.
+- `ERR_MODULE_NOT_FOUND: @deepseek-ai/...`: the profile's dependency tree is incomplete (a broken pnpm link); run `pnpm install` again in that profile directory, or use the app's built-in plugin channel.
+- On some Desktop distributions (the official Electron app in particular) the `desktop` profile is app-managed and the rules vary by distribution; never blindly edit the app-managed directory or bypass its validation.
 
 ## Features
 
@@ -129,34 +131,43 @@ For models without declared levels, Web and Desktop instead use user-authorized,
 
 ## CLI
 
-`dsh plugin --profile <web|dsh-tui> exec dsh-workbuddy-connect status`: sign-in state and remaining credit (`--json` for machine-readable output; `doctor` for diagnostics and `logout` for credential cleanup are also available). The `desktop` profile is generally managed by the desktop app, so the CLI (including `exec`) does not work against it (see the Desktop note under Install).
+Run this against a profile that has the plugin installed:
 
-Both commands target the CN version by default; add `--provider workbuddy-ai` for the international one:
+```sh
+dsh plugin --profile <web|desktop|dsh-tui> exec dsh-workbuddy-connect <status|doctor|logout>
+```
+
+- `status`: sign-in state and remaining credit; `doctor`: secret-free diagnostics; `logout`: removes only that version's plugin-owned credential copy, leaves the desktop app's own sign-in alone, and does not promise the model group disappears (the app's credential file still supplies one).
+- `--json` emits machine-readable output and is supported by `status` / `doctor` **only**; adding it to `logout` reports invalid options.
+- `--provider <id>` chooses the version: `workbuddy` (default, CN) or `workbuddy-ai` (international); `--provider=<id>` is accepted too:
 
 ```sh
 dsh plugin --profile web exec dsh-workbuddy-connect status --provider workbuddy-ai
 dsh plugin --profile web exec dsh-workbuddy-connect doctor --provider workbuddy-ai
 ```
 
-`logout` removes only that version's plugin-owned credential copy. It leaves the desktop app's own sign-in alone and does not promise the model group will disappear (the app's credential file still supplies one).
+> All three load the plugin through that profile's `node_modules` first. When the profile's dependency tree is incomplete they fail with `ERR_MODULE_NOT_FOUND` before parsing any argument — that is not an argument error (see "When the install fails").
 
 ## Configuration
 
-`retryPolicy` is plugin config (the `llm-workbuddy` entry in `cordis.yml`) shared by both versions; it is read once when the plugin loads, so reload or restart DSH after editing it.
+Write the config in **that profile's `cordis.patch.yml`**, not `cordis.yml` — the latter is an empty array whose own comment says "Edit cordis.patch.yml, not this file". A patch file is a YAML array, and the plugin's entry id is `llm-workbuddy`:
 
 ```yaml
-llm-workbuddy:
-  retryPolicy:
-    mode: normal
-    maxRetries: 15
-    backoff:
-      initialDelayMs: 2000
-      maxDelayMs: 30000
+- id: llm-workbuddy
+  config:
+    retryPolicy:
+      mode: normal
+      maxRetries: 15
+      backoff:
+        initialDelayMs: 2000
+        maxDelayMs: 30000
 ```
 
-- **Omitting the entire `retryPolicy` preserves the existing behavior**. When configuring it explicitly, `mode` is required; other optional fields use the defaults for the selected mode. Without configuration, the `dsh-llm` defaults apply, i.e. `mode: normal`, 5 retries, 500 ms doubling to a 10 s ceiling. That totals only ~**15.5 s of scheduled backoff** (≈14–17 s across the jitter range), with each attempt's own request time added on top, so it is not a guarantee of recovery within any fixed window.
-- **The example above** schedules up to ~360 s of backoff (≈396 s at the jitter edge) plus request time — enough for a multi-minute upstream outage, but still not a fixed-window guarantee; a longer outage needs a higher `maxRetries` or another route.
-- `mode: always` retries every failure until success, cancellation, or disposal with **no attempt cap**. It is not the default and is never enabled by omission; use it only when you accept that a request may not return for a long time.
+- Both versions share this config; the plugin reads it once at load, so restart DSH after editing.
+- **Omitting `retryPolicy` keeps the defaults** (`dsh-llm`): `mode: normal`, 5 retries, 500 ms doubling to a 10 s ceiling, 10% jitter — about **15.5 s** of scheduled backoff (≈14–17 s) plus each attempt's own request time, which is not a fixed-window guarantee.
+- **The example above** schedules up to about **360 s** (≈396 s at the jitter edge) — enough for a multi-minute upstream outage; a longer one needs a higher `maxRetries` or another route.
+- `mode: always` retries every failure until success, cancellation, or disposal with **no attempt cap**; it is not the default and is never enabled by omission.
+- `mode` is required (`normal` / `always`). `normal` also accepts `retryableCodes` (default `EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`) and `backoff.jitterRatio` (default `0.1`).
 
 ## Known limitations
 
