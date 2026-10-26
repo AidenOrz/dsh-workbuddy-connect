@@ -20,7 +20,9 @@ This repository has merged the upstream fix branch [`fix/channel-identity-opener
 
 **Caveat**: this is a byte-level compatibility rewrite aimed at a newly added third-party client check, so it is a cat-and-mouse fix — if upstream starts normalizing the opener, the neutral spelling needs to be revisited. Account and access risks remain the user's own, as stated in the "Disclaimer" at the end.
 
-**Version note**: `latest` on npm is still 0.7.9; this fix lives only on the repository's `main` (0.7.12). To use it now, install from this repository with the `github:` command in the Install section; otherwise install per the version table below once a new release is published.
+**0.7.13 (DSH 0.2.1-rc.3)**: DSH decides compatibility by comparing the plugin's `engines.dsh` — or, when that is absent, every `@deepseek-ai/dsh*` entry in `peerDependencies` — against the running core, and refuses the install or the startup with `incompatible-version` when any requirement is unmet. The peers were pinned to an exact `0.2.1-rc.2`, so the rc.3 upgrade rejected the whole package. Both are now `^0.2.1-rc.2`, which admits rc.2 and rc.3 without crossing into 0.3.
+
+**Version note**: `latest` on npm is still 0.7.9; these fixes live only on the repository's `main` (0.7.13). To use them now, install from this repository with the `github:` command in the Install section; when GitHub is unreachable, use the local tarball instead (see below).
 
 This repository's `main` is now one merge commit ahead of upstream; when syncing upstream later, avoid a hard reset so the fix is not lost.
 
@@ -32,11 +34,12 @@ Brings the models available in your signed-in WorkBuddy / WorkBuddy AI desktop a
 
 **Prerequisite**: the WorkBuddy (CN) or WorkBuddy AI desktop app is installed and signed in on this machine. The plugin reuses the app's sign-in state and follows account switches automatically; the two never affect each other.
 
-The plugin version must match the DSH core — a mismatch fails to start DSH — and the Desktop app picks its plugin version by the bundled core. This repository is verified on **DSH `0.2.1-rc.2`** (Node 22+, pnpm 11):
+The plugin version must match the DSH core — a mismatch is rejected as `incompatible-version`, at install time or at startup — and the Desktop app picks its plugin version by the bundled core. This repository is verified on **DSH `0.2.1-rc.2` / `0.2.1-rc.3`** (Node 22+, pnpm 11):
 
 | DSH core | Plugin version |
 |---|---|
-| `0.2.1-rc.2` | `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
+| `0.2.1-rc.3` | `0.7.13` (this repository's `main`) |
+| `0.2.1-rc.2` | `0.7.13` / `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -50,11 +53,22 @@ Run this with the **`dsh` bundled in the desktop app's runtime**, not a standalo
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **`latest` on npm is still `0.7.9`, which does not contain the 2026-10-21 channel-check fix.** The command above installs `0.7.12` from this repository's `main`.
+- **`latest` on npm is still `0.7.9`, which contains neither the 2026-10-21 channel-check fix nor the rc.3 adaptation.** The command above installs `0.7.13` from this repository's `main`.
 - Package names are unique within a profile: the command **replaces** an already installed copy rather than adding a second one. To return to the npm build: `dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`.
 - Fully quit and restart the app afterwards — the plugin is loaded at startup.
-- The `github:` specifier is resolved by pnpm through `git ls-remote`; when GitHub is unreachable you get `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`, so configure a proxy for git and retry.
-- Verified here on Windows 11 + WorkBuddy `5.8.3` + DSH `0.2.1-rc.2`.
+- The `github:` specifier is resolved by pnpm through `git ls-remote`; when GitHub is unreachable you get `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`. **Install from a local tarball instead — no network needed:**
+
+  ```sh
+  # In this repository (runs the tsdown build), producing dsh-workbuddy-connect-0.7.13.tgz
+  pnpm install && pnpm pack
+
+  # Remove the git-sourced entry first, or pnpm still tries to reach GitHub
+  dsh plugin --profile desktop remove dsh-workbuddy-connect
+  dsh plugin --profile desktop add <absolute path to the tarball>
+  ```
+
+  The install record then points at that absolute path, so deleting the tarball breaks the next `pnpm install`; switch back to the `github:` source once GitHub is reachable.
+- Verified here on Windows 11 + WorkBuddy `5.8.3` + DSH `0.2.1-rc.3`.
 
 ### Web / TUI
 
@@ -68,7 +82,7 @@ dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 ```
 
-> Web / TUI can also install `0.7.12` from `github:AidenOrz/dsh-workbuddy-connect`, but this repository is only verified on Desktop.
+> Web / TUI can also install `0.7.13` from `github:AidenOrz/dsh-workbuddy-connect`, but this repository is only verified on Desktop.
 > TUI version pairing: the terminal shell `@deepseek-harness-tui/dsh-tui` must be `0.10.0-beta.5` or newer — older versions fail at startup with this plugin installed (`events is not iterable`); manual reasoning-level detection exists on Web / Desktop only, not TUI.
 
 ### Verify
@@ -77,7 +91,8 @@ After restarting the interface, the model picker shows the "WorkBuddy / WorkBudd
 
 ### When the install fails
 
-- `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`: GitHub is unreachable; configure a proxy for git and retry.
+- **`incompatible-version`, or "Plugin … is incompatible with dsh 0.2.1-rc.x"**: the plugin version has not caught up with the upgraded core; install the plugin version listed in the table above. `dsh plugin allow-version` can exempt that exact plugin-version/core-version pair temporarily, but it only skips the check — it does not make the plugin compatible.
+- `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`: GitHub is unreachable; configure a proxy for git and retry, or install from a local tarball (see above).
 - `ERR_MODULE_NOT_FOUND: @deepseek-ai/...`: the profile's dependency tree is incomplete (a broken pnpm link); run `pnpm install` again in that profile directory, or use the app's built-in plugin channel.
 - On some Desktop distributions (the official Electron app in particular) the `desktop` profile is app-managed and the rules vary by distribution; never blindly edit the app-managed directory or bypass its validation.
 
@@ -186,7 +201,8 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 | DSH core | Recommended plugin | Notes |
 |---|---|---|
-| `0.2.1-rc.2` | `0.7.9` | Targets this core only; `0.2.0-rc.2` and `0.2.1-rc.2` differ. Check the core bundled in your Desktop app. |
+| `0.2.1-rc.3` | `0.7.13` | Declares `engines.dsh: ^0.2.1-rc.2`, so the rc.2 and rc.3 lines both pass DSH's compatibility gate. |
+| `0.2.1-rc.2` | `0.7.13` (or `0.7.9` from npm) | `0.2.0-rc.2` and `0.2.1-rc.2` differ; check the core bundled in your Desktop app. |
 | `0.2.1-rc.1` | `0.7.7` | The core moved to `@earendil-works/pi-ai` 1.3.0, so the plugin bundles 1.3.0 too — a leftover 0.87.1 overrides entry must be removed (see the pi-ai note below). |
 | `0.2.0-rc.2` | `0.7.6` | Previous core line; fixes enterprise catalog gaps and international chat requests blocked by the upstream channel check. Avoid 0.7.2 with its registry regression. |
 | `0.2.0-rc.1` | `0.7.0` | 0.7.1 drops rc.1 support; stay on this version. |
@@ -196,6 +212,7 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 Release history (full records at [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)):
 
+- **0.7.13**: adapts to DSH 0.2.1-rc.3 — `engines.dsh` / peer ranges widened to `^0.2.1-rc.2` so the rc.3 core no longer rejects the package as `incompatible-version`.
 - **0.7.12**: fixes the Windows channel-check failure: the product name is neutralized everywhere in system messages (previously only the opener), and the real client version plus the bundled CLI version are read on Windows, restoring the `CLI/…` UA segment.
 - **0.7.11**: widens the channel-fingerprint rewrite to the per-model identity line (`You are a coding agent powered by <model> model.`, dotted model names included) and neutralizes every identity line stacked at the top of one system message; fixes the `HTTP 400 / code 11128` still seen after 0.7.10.
 - **0.7.10**: fixes the CN gateway's channel check on the fixed DSH opener (a system message starting with that sentence returned `HTTP 400 / code 11128`) by rewriting the opening sentence to a neutral one, for both string and array content shapes (PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204), by @Elycheng).

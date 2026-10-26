@@ -4,7 +4,7 @@
 # 天下没有不散的宴席？
 ## 分支合并通知
 
-本仓库已合并上游修复分支 [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，作者 [@Elycheng](https://github.com/Elycheng)），合并提交 `0c9b269`；此后又修了两轮，现为 **0.7.12**。
+本仓库已合并上游修复分支 [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，作者 [@Elycheng](https://github.com/Elycheng)），合并提交 `0c9b269`；此后又修了两轮，并适配了 DSH `0.2.1-rc.3`，现为 **0.7.13**。
 
 **起因**：2026 年 10 月 20 日起，国内网关会拦下带 DSH 客户端特征的请求，返回 `HTTP 400 / code 11128`（「请求被拦截，请重新发送」），WorkBuddy 分组下的模型全部不可用，而官方 App 正常。
 
@@ -13,12 +13,13 @@
 - **0.7.10**：把 system 消息开头的 `You are an AI agent powered by DeepSeek Harness.` 改写为 `You are an AI agent.`；
 - **0.7.11**：补上紧随其后的 `You are a coding agent powered by <模型> model.`（模型名含点号），并处理开头连续堆叠的多条身份句；
 - **0.7.12**：校验实际是**全文扫描**——DSH 每轮追加的 runtime context 含十余处 `DeepSeek Harness`，现统一改写为 `the agent runtime`（user 消息不动）；同时修正 Windows 上读不到真实客户端版本的问题，UA 恢复为 `WorkBuddy/<应用版本> WorkBuddy/<应用版本> CLI/<CLI 版本>`。
+- **0.7.13**：适配 DSH `0.2.1-rc.3`。DSH 用插件的 `engines.dsh`（没写则用 `peerDependencies` 里所有 `@deepseek-ai/dsh*`）与运行时版本比对，任一不满足就判 `incompatible-version` **拒绝安装/拒绝启动**；原先 peer 钉在精确的 `0.2.1-rc.2`，rc.3 一升级就整包不可用。现改为 `engines.dsh: ^0.2.1-rc.2` 且 peer 用同一条 caret 范围，rc.2 与 rc.3 都满足，又不跨到 0.3。
 
 完整排查过程、验证数据与已知副作用见 [`docs/channel-check-fix.md`](./docs/channel-check-fix.md)。
 
 **需要注意**：这是针对上游渠道校验的字节级兼容改写，属于「猫鼠游戏」，上游调整校验维度后可能需要重新适配；checkout 路径也会被一并改写，模型若需读取该路径会失败。账号与接入风险仍按文末「免责声明」由使用者自行承担。
 
-**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，上述修复只存在于仓库 `main`（0.7.12）上；要用请按「安装」章节里的 `github:` 命令从本仓库安装。
+**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，上述修复只存在于仓库 `main`（0.7.13）上；要用请按「安装」章节里的 `github:` 命令从本仓库安装，GitHub 不通时可用本地 tgz（见下）。
 
 本仓库 `main` 现已领先上游若干提交；后续同步上游时请不要直接硬重置，以免丢掉这些修复。
 
@@ -30,11 +31,12 @@
 
 **前置**：本机已安装并登录 WorkBuddy（国内版）或 WorkBuddy AI 桌面 App。插件复用 App 的登录状态，账号切换自动跟随，两版互不影响。
 
-插件版本必须与 DSH 内核匹配，不匹配会导致 DSH 启动失败；桌面版以 App 内置核心为准。本仓库在 **DSH `0.2.1-rc.2`**（Node 22+、pnpm 11）上验证：
+插件版本必须与 DSH 内核匹配，不匹配会被判定为 `incompatible-version` 而拒绝安装或拒绝启动；桌面版以 App 内置核心为准。本仓库在 **DSH `0.2.1-rc.2` / `0.2.1-rc.3`**（Node 22+、pnpm 11）上验证：
 
 | DSH 内核 | 插件版本 |
 |---|---|
-| `0.2.1-rc.2` | `0.7.12`（本仓库 `main`）／`0.7.9`（npm） |
+| `0.2.1-rc.3` | `0.7.13`（本仓库 `main`） |
+| `0.2.1-rc.2` | `0.7.13` / `0.7.12`（本仓库 `main`）／`0.7.9`（npm） |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -48,11 +50,22 @@
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复**。上面这条命令从本仓库 `main` 安装 `0.7.12`。
+- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复，也不含 rc.3 适配**。上面这条命令从本仓库 `main` 安装 `0.7.13`。
 - 同一 profile 内包名唯一：这条命令会**替换**已装的同名插件，不会并存。回退到 npm 版：`dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`。
 - 装完必须**完全退出并重启** App，插件只在启动时加载。
-- `github:` 源由 pnpm 调 `git ls-remote` 解析，GitHub 不可达会报 `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`；先给 git 配好代理再重试。
-- 本机实测环境：Windows 11 + WorkBuddy `5.8.3` + DSH `0.2.1-rc.2`。
+- `github:` 源由 pnpm 调 `git ls-remote` 解析，GitHub 不可达会报 `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`。**这时改成装本地 tgz，全程不走网络**：
+
+  ```sh
+  # 在本仓库目录里打包（会触发 tsdown 构建），产出 dsh-workbuddy-connect-0.7.13.tgz
+  pnpm install && pnpm pack
+
+  # 先摘掉旧的 git 源条目，否则 pnpm 仍会去拉 GitHub
+  dsh plugin --profile desktop remove dsh-workbuddy-connect
+  dsh plugin --profile desktop add <tgz 的绝对路径>
+  ```
+
+  注意安装记录会变成这个绝对路径，tgz 被删掉后再次 `pnpm install` 会失败；长期使用建议在 GitHub 可达时换回 `github:` 源。
+- 本机实测环境：Windows 11 + WorkBuddy `5.8.3` + DSH `0.2.1-rc.3`。
 
 ### Web / TUI
 
@@ -66,7 +79,7 @@ dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 ```
 
-> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 装 `0.7.12`，但本仓库只在桌面版实测过。
+> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 装 `0.7.13`，但本仓库只在桌面版实测过。
 > TUI 版本搭配：终端壳 `@deepseek-harness-tui/dsh-tui` 需 `0.10.0-beta.5` 及以上，更早版本装本插件会启动失败（`events is not iterable`）；推理档位的手动检测仅 Web / Desktop 提供，TUI 没有。
 
 ### 验证
@@ -75,7 +88,8 @@ dsh --profile dsh-tui
 
 ### 装不上时
 
-- `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`：GitHub 不可达，给 git 配置代理后重试。
+- **`incompatible-version` / 提示「Plugin … is incompatible with dsh 0.2.1-rc.x」**：DSH 升级后插件版本没跟上，换用对应内核的插件版本（见上方版本表）。临时绕过可用 `dsh plugin allow-version` 给「插件@版本 + 内核版本」这一对组合开豁免，但那只是跳过校验，不代表真的兼容。
+- `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`：GitHub 不可达，给 git 配置代理后重试，或改用本地 tgz（见上）。
 - `ERR_MODULE_NOT_FOUND: @deepseek-ai/...`：该 profile 的依赖树不完整（pnpm 链接失效），需要先在 profile 目录重新 `pnpm install`，或改用 App 内置的插件渠道。
 - 部分 Desktop 发行版（尤其官方 Electron 版）的 `desktop` profile 由 App 管理，规则随发行版不同；不要盲改 App 管理的目录，也不要绕过其校验。
 
