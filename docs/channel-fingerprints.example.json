@@ -1,0 +1,17 @@
+{
+  "_readme": [
+    "渠道指纹覆盖表。复制到 %USERPROFILE%\\.dsh\\.workbuddy-channel-fingerprints.json（Linux/macOS 为 ~/.dsh/），或用环境变量 WORKBUDDY_FINGERPRINTS 指定别的路径。",
+    "这个文件只对本机生效，不要提交进版本库——仓库里只放这份示例。",
+    "改完不需要重启：文件大小或修改时间一变，下一次请求就会用新表。",
+    "find 默认按字面量匹配（点号、括号都是普通字符）；要写正则请加 \"regex\": true，必要时配 \"flags\"。",
+    "find 与内置规则相同时覆盖内置；不同的则追加。内置规则不会被删掉，所以文件写坏了最差也只是回到内置行为。"
+  ],
+  "version": 1,
+  "rules": [
+    {
+      "_why": "2026-10-27 实测：网关按整句匹配这句，来自 @deepseek-ai/dsh-file-reference。改句中任一词即可绕过，改写后语义不变。",
+      "find": "Relative paths resolve from the workspace root",
+      "replace": "Relative paths resolve against the workspace directory"
+    }
+  ]
+}

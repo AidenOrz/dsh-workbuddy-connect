@@ -4,6 +4,7 @@
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { WorkBuddyCredentialStore, workbuddyOwnAuthPath } from './auth.ts'
+import { fingerprintDiagnostics } from './channel-fingerprints.ts'
 import { WorkBuddyUpstreamClient } from './upstream.ts'
 import { FALLBACK_WORKBUDDY_AI_MODELS, FALLBACK_WORKBUDDY_MODELS } from './catalog.ts'
 import { WORKBUDDY_CONNECT_VERSION } from './version.ts'
@@ -93,6 +94,10 @@ async function doctor(jsonOutput: boolean, variant: WorkBuddyVariant): Promise<n
     : undefined
   const drift = versionDrift()
   const driftWarning = versionDriftWarning(drift)
+  // The rule table is the part the gateway keeps obsoleting, and it is now
+  // editable from a file — so a broken file is a likely state and deserves a
+  // straight answer instead of "requests suddenly fail".
+  const fingerprints = fingerprintDiagnostics()
   const report = {
     schemaVersion: JSON_SCHEMA_VERSION,
     package: 'dsh-workbuddy-connect',
@@ -125,6 +130,7 @@ async function doctor(jsonOutput: boolean, variant: WorkBuddyVariant): Promise<n
     },
     signIn: status.state,
     fallbackModels: fallbackCount(variant),
+    channelFingerprints: fingerprints,
     ...drift === undefined ? {} : { manifestVersion: drift.manifest },
     hints: [
       ...decryptionNote !== undefined ? [decryptionNote]
@@ -132,6 +138,7 @@ async function doctor(jsonOutput: boolean, variant: WorkBuddyVariant): Promise<n
       ...desktopPresent ? [] : [`No ${variant.appName} desktop auth file at the expected path; set ${variant.env} if it lives elsewhere.`],
       ...hostAlive ? [] : ['Host bundle not running in this DSH profile (or the process exited). The browser card and provider are unavailable until DSH starts the plugin.'],
       ...driftWarning === undefined ? [] : [driftWarning],
+      ...fingerprints.problem === undefined ? [] : [`Channel fingerprint file at ${fingerprints.path} was ignored: ${fingerprints.problem}. Built-in rules are still applied.`],
     ],
   }
   if (jsonOutput) {
@@ -143,6 +150,7 @@ async function doctor(jsonOutput: boolean, variant: WorkBuddyVariant): Promise<n
       `Host bundle: ${hostAlive ? `running (pid ${heartbeat!.pid})` : heartbeat !== undefined ? 'stale heartbeat (process exited)' : 'not started'}`,
       `Sign-in state: ${report.signIn}`,
       `Static fallback models: ${report.fallbackModels}`,
+      `Channel fingerprints: ${String(fingerprints.rules)} rule(s), ${String(fingerprints.external)} from ${fingerprints.path}`,
       ...drift === undefined ? [] : [`Manifest version: ${drift.manifest} (loaded build is ${drift.build})`],
       ...appVersion === undefined ? [] : [`Catalog User-Agent version: ${appVersion.version} (${appVersion.source})`],
       ...report.hints.map(hint => `Hint: ${hint}`),

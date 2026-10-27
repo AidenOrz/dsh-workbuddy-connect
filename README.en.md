@@ -186,6 +186,37 @@ Write the config in **that profile's `cordis.patch.yml`**, not `cordis.yml` — 
 - `mode: always` retries every failure until success, cancellation, or disposal with **no attempt cap**; it is not the default and is never enabled by omission.
 - `mode` is required (`normal` / `always`). `normal` also accepts `retryableCodes` (default `EMPTY_RESPONSE`, `RATE_LIMIT`, `SERVER`, `TIMEOUT`, `TRANSPORT`) and `backoff.jitterRatio` (default `0.1`).
 
+## Channel fingerprint rules
+
+The CN gateway rejects requests that carry a "non-official client" fingerprint (`400 / code 11128`). Before sending, the plugin rewrites those fingerprints to neutral wording. The rule table is **not** edited in code:
+
+- A set of **built-ins** ships with the package, so a fresh install works immediately.
+- An optional **external file** overrides them, machine-local and untracked.
+
+```text
+%USERPROFILE%\.dsh\.workbuddy-channel-fingerprints.json     # default location
+```
+
+Point `WORKBUDDY_FINGERPRINTS` elsewhere if you prefer. Format: [`docs/channel-fingerprints.example.json`](./docs/channel-fingerprints.example.json).
+
+```json
+{
+  "version": 1,
+  "rules": [
+    { "find": "the text the gateway rejects", "replace": "what to send instead" }
+  ]
+}
+```
+
+Details worth knowing:
+
+- `find` is **literal** by default — dots and parentheses are ordinary characters. Use `"regex": true` (plus optional `"flags"`, default `gu`) when you need a pattern.
+- A rule whose `find` matches a built-in **overrides** it; a new `find` **appends**. Built-ins are never removed, so a broken file degrades to built-in behaviour rather than breaking the plugin.
+- **No restart needed**: when the file's size or mtime changes, the next request picks up the new table.
+- A document version higher than the build supports is rejected (falling back to built-ins) instead of being half-understood.
+
+Why it lives in a file: this is a cat-and-mouse game, and every new gateway rule used to mean a code change, a rebuild and a reinstall. Now it is one text edit and the next request. The three rounds so far are documented in [`docs/channel-check-fix.md`](./docs/channel-check-fix.md) (Chinese).
+
 ## Known limitations
 
 - Verified on macOS with the DSH Web / Desktop / TUI profiles (as of 0.3.2 this requires `0.1.5-rc.1`+ and Node 22+; TUI requires the terminal UI package `0.10.0-beta.5` or newer — see the Install section). Windows probes Local and Roaming AppData in order; WSL first reads credentials from the mounted Windows user profile. If the Windows and Linux user names differ and Windows environment variables are not forwarded into WSL, point `WORKBUDDY_AUTH_FILE` (or `WORKBUDDY_AI_AUTH_FILE` for the international version) at the actual file.

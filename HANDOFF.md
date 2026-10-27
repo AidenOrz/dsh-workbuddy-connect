@@ -1,6 +1,6 @@
 # 交接说明
 
-> 最后更新：2026-10-28 ｜ 当前版本 **0.7.14** ｜ 分支 `main`
+> 最后更新：2026-10-28 ｜ 当前版本 **0.7.15** ｜ 分支 `main`
 
 写给下一个接手这个仓库的人（或 AI）。目标：让你在**不重走弯路**的前提下，知道这里为什么长这样、现在什么状态、下一步该往哪看。
 
@@ -24,7 +24,7 @@
 
 | 项 | 值 |
 |---|---|
-| 版本 | `0.7.14` |
+| 版本 | `0.7.15` |
 | 对应 DSH 内核 | `0.2.1-rc.3`（`engines.dsh: ^0.2.1-rc.2`，rc.2/rc.3 都可用） |
 | 验证过的客户端 | WorkBuddy `37.10.3-42`（Windows 11） |
 | npm | 仍是 `0.7.9`，**不含任何修复** |
@@ -51,13 +51,15 @@
 
 ### 现在的判据形态
 
-```ts
-// src/upstream.ts
-const PRODUCT_NAME_PATTERN = /DeepSeek Harness/gu          // 全文，system/developer
-const PROMPT_FINGERPRINTS = [
-  [/Relative paths resolve from the workspace root/gu, 'Relative paths resolve against the workspace directory'],
-]
+规则表已从代码里搬出来，放在 `src/channel-fingerprints.ts`（内置）和 `~/.dsh/.workbuddy-channel-fingerprints.json`（外部覆盖）：
+
 ```
+DeepSeek Harness                                    → the agent runtime
+Relative paths resolve from the workspace root      → Relative paths resolve against the workspace directory
+```
+
+**只为了自己用**：改 `~/.dsh/.workbuddy-channel-fingerprints.json`，下一次请求生效。
+**要随包发布**：改 `src/channel-fingerprints.ts` 的 `BUILTIN_FINGERPRINTS`，然后构建 + 升版本 + 打 tgz。
 
 三条已确认的性质，改动时别破坏：
 
@@ -71,27 +73,31 @@ const PROMPT_FINGERPRINTS = [
 
 ```
 src/
-  upstream.ts                    指纹清理 + 上游请求。改渠道校验基本只动这个文件
+  upstream.ts                    上游请求 + 指纹清理入口。改协议只动这个文件
     neutralizeChannelIdentity()  遍历 system/developer，改写指纹（入口）
     rewriteChannelIdentityLine() 开头连续身份句归一
-    scrubChannelPhrases()        产品名 + 句子指纹
+    scrubChannelPhrases()        套用指纹规则表（规则本身不在这里）
+  channel-fingerprints.ts        **指纹规则表**：内置 + 外部文件覆盖（格式见 docs/channel-fingerprints.example.json）
   client-identity.ts             客户端身份：exe FileVersion + 内置 CLI 版本 → UA
   desktop-credential-protection.ts  auth 文件解密（5.6+ 信封、AAD、key helper）
   auth.ts                        凭据 store：桌面文件 → 插件自留副本
   adapter.ts / catalog.ts        模型目录与 listModels
   probe.ts                       模型探测（max_tokens:1，逐档 effort）
-lib/                             构建产物（进版本库；本机常因 node_modules 坏而手工同步）
-tests/channel-fingerprint.spec.ts  指纹相关全部用例（16 个）
+lib/                             构建产物（进版本库；tsdown 能跑，别手工改）
+tests/channel-fingerprint.spec.ts  指纹改写与线上 body（16 个）
+tests/channel-fingerprints.spec.ts 规则表合并、外部覆盖、坏文件降级（12 个）
 cordis.patch.yml                插件 bundle 的 loader 入口
 ```
 
-**改指纹的完整动作**：`src/upstream.ts` → 手工同步 `lib/version-resolve-*.js` → 补测试 → 跑测试 → 覆盖已装副本 → 升版本 → 打 tgz → 重启验证。漏一步就会出现「代码对了但没生效」。
+**只加一条新指纹**：改 `~/.dsh/.workbuddy-channel-fingerprints.json`（格式见 `docs/channel-fingerprints.example.json`），下次请求就生效，不用碰代码、不用重装。
+
+**改内置指纹**（要让别人装完就带）：`src/channel-fingerprints.ts` 的 `BUILTIN_FINGERPRINTS` → 补测试 → `tsdown` 构建 → 升版本 → 打 tgz → 装。漏一步就会出现「代码对了但没生效」。
 
 ---
 
 ## 5. 构建与测试
 
-本仓库的 `node_modules` 链接层**经常是坏的**：`.pnpm` 和 `.bin` 都在，只有顶层链接缺。`tsdown` 因此跑不起来，`lib/` 只能手工同步。
+`tsdown` 能跑，但前提是 `node_modules` 顶层链接完整——本仓库的链接层**经常是坏的**：`.pnpm` 和 `.bin` 都在，只有顶层链接缺（`Cannot find package '@deepseek-ai/dsh-atomic-write'` 就是它）。
 
 补链接（不要删 `node_modules` 重装——删了一样坏）：
 
@@ -101,20 +107,27 @@ $nm = "E:\workspace\dsh-workbuddy-connect\node_modules"
 Get-ChildItem "$nm\.pnpm" -Directory | Where-Object { $_.Name -match '^(@deepseek-ai\+|vitest@|typescript@|tsdown@)' } | ForEach-Object { ... }
 ```
 
-跑测试：
+跑测试（两个都要，规则表拆出来后是分开的）：
 
 ```sh
 node node_modules/.pnpm/vitest@*/node_modules/vitest/vitest.mjs run tests/channel-fingerprint.spec.ts
+node node_modules/.pnpm/vitest@*/node_modules/vitest/vitest.mjs run tests/channel-fingerprints.spec.ts
 ```
 
 缺 `@deepseek-ai/dsh-atomic-write` 之类报错，就是链接没补全。
 
-手工同步产物后**必须** `node --check lib/version-resolve-*.js`。
+构建：
+
+```sh
+node node_modules/.pnpm/tsdown@*/node_modules/tsdown/dist/run.mjs
+```
+
+**chunk 文件名带内容 hash**（`version-resolve-<hash>.js`），每次构建都会变。构建完要确认 `lib/` 里只有新 chunk、旧的不残留；`git status` 里表现为删一个加一个，正常。
 
 打包与安装：
 
 ```sh
-# 打包（不跑 tsdown，直接拷 lib，避免它先清空 lib/）
+# 打包（若已构建好，直接拷 lib；不要用 npm pack，它会触发 prepack 再构建一遍）
 mkdir -p /tmp/pack/package && cp -r package.json lib cordis.patch.yml README*.md LICENSE THIRD_PARTY_NOTICES.txt /tmp/pack/package/
 cd /tmp/pack && tar -czf out.tgz package && cp out.tgz <repo>/dist/dsh-workbuddy-connect-<ver>.tgz
 

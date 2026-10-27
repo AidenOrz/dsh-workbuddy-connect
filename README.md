@@ -155,7 +155,36 @@ dsh plugin --profile web exec dsh-workbuddy-connect doctor --provider workbuddy-
 - `mode: always` 表示**不设次数上限**，一直重试到成功、取消或插件卸载；它不是默认值，也不会因省略配置而启用，只在能接受「请求长时间不返回」时使用。
 - `mode` 为必填（`normal` / `always`）。`normal` 还接受 `retryableCodes`（默认 `EMPTY_RESPONSE`、`RATE_LIMIT`、`SERVER`、`TIMEOUT`、`TRANSPORT`）与 `backoff.jitterRatio`（默认 `0.1`）。
 
+## 渠道指纹规则表
 
+国内网关会拦下带"非官方客户端特征"的请求（`400 / code 11128`「请求被拦截」）。插件在发请求前把这些特征改写成中性表述，规则表**不在代码里改**，而是：
+
+- **内置一份**，随包发布，保证装完即用；
+- **可选的外部文件**覆盖它，只对本机生效、不进版本库。
+
+```text
+%USERPROFILE%\.dsh\.workbuddy-channel-fingerprints.json     # 默认位置
+```
+
+也可以用环境变量 `WORKBUDDY_FINGERPRINTS` 指定别处。格式见 [`docs/channel-fingerprints.example.json`](./docs/channel-fingerprints.example.json)：
+
+```json
+{
+  "version": 1,
+  "rules": [
+    { "find": "被拦的原文", "replace": "替换成什么" }
+  ]
+}
+```
+
+几条要点：
+
+- `find` 默认按**字面量**匹配，点号括号都是普通字符；要写正则加 `"regex": true`，必要时配 `"flags"`（默认 `gu`）。
+- `find` 与内置规则相同则**覆盖**，不同则**追加**。内置规则永远不会被删除，所以文件写坏了最差也只是退回内置行为——不会让插件彻底失效。
+- **改完不用重启**：文件的大小或修改时间一变，下一次请求就用新表。
+- 文件版本号高于插件支持的版本时会被拒绝（并回落到内置），避免新格式被旧代码误读。
+
+为什么做成外置：这是场猫鼠游戏，网关每次新增判据都得改一次规则；放在文件里意味着**改一行文本 + 等下一次请求**，而不是改代码、重新构建、重新安装。历史上的三轮判据演进见 [`docs/channel-check-fix.md`](./docs/channel-check-fix.md)。
 
 ## 免责声明
 

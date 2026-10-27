@@ -9,6 +9,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { appUserAgent, resolveAppVersion, type AppVersionInfo } from './app-version.ts'
+import { activeFingerprints } from './channel-fingerprints.ts'
 import { chatUserAgent, fallbackChatIdentity, resolveChatIdentity, type ChatIdentity } from './client-identity.ts'
 import type { WorkBuddyCredential } from './auth.ts'
 import type { ProbeAttempt } from './probe.ts'
@@ -605,51 +606,27 @@ const CHANNEL_IDENTITY_PATTERN = /^[\s\uFEFF]*You are an?(?: AI)?(?: coding)? ag
 const NEUTRAL_IDENTITY = 'You are an AI agent.'
 
 /**
- * The product name the channel check scans for **anywhere** in a system
- * message, not only in the opening sentence.
+ * Scrub every fingerprint the channel check objects to from one system string.
  *
- * Measured 2026-10-21 evening: with the identity opener neutralized and the
- * desktop UA restored, a real session still answered 400 / 11128. Its system
- * messages carried the runtime context DSH appends to every prompt —
+ * The rule table lives in `channel-fingerprints.ts` rather than here: the list
+ * is what the gateway keeps changing, and keeping it out of the hot path means
+ * the next round is a text edit in a machine-local JSON file instead of a code
+ * change, a rebuild and a reinstall. Built-ins still ship with the package, so
+ * a fresh install behaves exactly as before.
  *
- *   Current DeepSeek Harness implementation checkout: "C:\…\DeepSeek Harness\…"
- *   Current DeepSeek Harness Web GUI URL: "http://127.0.0.1:…"
+ * History of what landed in that table, so a future round knows what has
+ * already been ruled out:
  *
- * — repeated once per turn, eleven occurrences in one request. Replacing just
- * this product name made the same request succeed, so the check is a full-text
- * scan for it rather than a prefix rule.
- */
-const PRODUCT_NAME_PATTERN = /DeepSeek Harness/gu
-
-/** Neutral stand-in for {@link PRODUCT_NAME_PATTERN}; keeps the sentence grammatical. */
-const NEUTRAL_PRODUCT_NAME = 'the agent runtime'
-
-/**
- * Sentences the channel check matches **verbatim** inside a system message.
- *
- * Measured 2026-10-27: a DSH `0.2.1-rc.3` session on `deepseek-v4.1-flash`
- * answered 400 / code 11128 with every earlier fingerprint already neutralized.
- * Bisecting the captured body put the trigger on this one clause, contributed
- * by `@deepseek-ai/dsh-file-reference`: changing any word in it — `resolve` to
- * `map`, `workspace` to `dir`, or dropping the clause outright — makes the same
- * 49 KB body succeed. The substitution keeps the instruction's meaning: relative
- * paths still resolve, just against a differently named directory.
- *
- * This is a sentence-level rule, not a word list: `workspace root` alone, and
- * the same words padded with filler text, both pass. Expect the list to grow —
- * it is the same cat-and-mouse shape as {@link PRODUCT_NAME_PATTERN}.
- */
-const PROMPT_FINGERPRINTS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/Relative paths resolve from the workspace root/gu, 'Relative paths resolve against the workspace directory'],
-]
-
-/**
- * Scrub every fingerprint the channel check objects to from one system string:
- * the product name anywhere, plus the sentences listed above.
+ * - `DeepSeek Harness` (2026-10-21) — DSH appends runtime context every turn
+ *   naming the implementation checkout and the Web GUI URL; one request carried
+ *   eleven occurrences, so the check is a full-text scan, not a prefix rule.
+ * - `Relative paths resolve from the workspace root` (2026-10-27) — contributed
+ *   by `@deepseek-ai/dsh-file-reference`; matched as a whole **sentence**, not
+ *   as a word list (`workspace root` alone does not trigger it).
  */
 function scrubChannelPhrases(text: string): string {
-  let out = text.replace(PRODUCT_NAME_PATTERN, NEUTRAL_PRODUCT_NAME)
-  for (const [pattern, replacement] of PROMPT_FINGERPRINTS) out = out.replace(pattern, replacement)
+  let out = text
+  for (const { pattern, replacement } of activeFingerprints()) out = out.replace(pattern, replacement)
   return out
 }
 

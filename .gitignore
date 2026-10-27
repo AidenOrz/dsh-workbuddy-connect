@@ -7,3 +7,5 @@ AGENTS.md
 .zcode/
 .workbuddy/
 dist/
+# 本机指纹覆盖表：只对本机生效，不进版本库（示例见 docs/channel-fingerprints.example.json）
+.workbuddy-channel-fingerprints.json
