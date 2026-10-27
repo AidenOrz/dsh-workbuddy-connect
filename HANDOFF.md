@@ -143,7 +143,7 @@ dsh plugin --profile desktop add <repo>\dist\dsh-workbuddy-connect-<ver>.tgz
 
 | 事项 | 状态 |
 |---|---|
-| **模型探测里缺 `deepseek-v4.1-flash` 和 `glm-5.3-flash`** | **未解释**。用户报告的现象。但直接对这两个模型发 probe（`max_tokens:1`，0/low/medium/high/xhigh/max 六档）**全部 200**，目录里也都在。怀疑是探测结果缓存着 400 期间的状态，或指的是某个特定面板。下一个人接手时先问清「在哪看到的」 |
+| ✅ **「推理档位检测」里没有 `deepseek-v4.1-flash` / `glm-5.3-flash`** | **已解释，不是故障**。上游已在目录里为这两个模型声明了 `supportedEfforts: ["low","high","max"]`，而 `isProbeCandidate()` 只把「支持推理但档位未知」的模型列为检测候选。声明值优先，所以它们不进检测面板——这是设计，避免面板承诺模型选择器并不提供的档位。同一时刻 `hy3`、`deepseek-v4-pro` 等没有声明的仍然在候选里。 |
 | awesome-dsh-plugin PR #8513 | CI 全绿，`held: author`，等维护者。不要重推、不要空 commit |
 | `README.en.md` 与 `README.md` 结构差异 | 英文版还留着 `Known limitations` / `Compatibility and release history` 等章节，中文版已删。要对齐需人工决定删哪边 |
 | npm 发版 | 做不到，包名归 corrinehu。要给人用只能 `github:AidenOrz/dsh-workbuddy-connect` 或 tgz |
