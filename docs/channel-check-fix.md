@@ -169,9 +169,84 @@ X-IDE-Version:  5.5.6 → 5.8.3
 | 0.7.10 | 合并上游 PR #204：中和开头的身份句 | `0c9b269`（merge） |
 | 0.7.11 | 扩展 per-model 身份句，处理连续堆叠的身份行 | `648070a` |
 | 0.7.12 | 全文产品名中性化；Windows 客户端版本与 CLI 版本读取 | `30eb509` |
+| 0.7.13 | 适配 DSH `0.2.1-rc.3`：`engines.dsh` + peer 放宽到 caret 范围 | `9e49b94` |
+| 0.7.14 | 中和句子级指纹 `Relative paths resolve from the workspace root` | `c440b3c` |
 
 安装（从本仓库源码，同一 profile 内会替换同名旧版）：
 
 ```sh
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
+
+---
+
+## 九、第三轮：句子指纹（0.7.14）
+
+2026-10-27 起 11128 再次出现，但**与前两轮无关**——身份句已归一化、产品名已清干净，仍被拦。
+
+### 9.1 现场
+
+抓到的真实请求（body 49601 字符，`deepseek-v4.1-flash`，`reasoning_effort: high`）：
+
+```
+chat-req  ua=WorkBuddy/5.8.3 WorkBuddy/5.8.3 CLI/2.161.0
+          body-head: "You are an AI agent.\n\nYou are an AI agent.\n\n`run_code` is the only tool…
+chat-res  status=400  code=11128 "Illegal API invocation from an unapproved channel"
+```
+
+注意 system 开头**已经**是两行 `You are an AI agent.`，说明前两轮的修复都在位。
+
+### 9.2 二分定位
+
+| 变量 | 结果 |
+|---|---|
+| 完整 body | 400 |
+| 去 `tools` | 400 |
+| **去 `system`** | **200** |
+| 去 `reasoning_effort` | 400 |
+
+system 内部按长度切：250 通过、500 失败；再收到 310 通过、**314 失败**、313 通过。
+
+313 与 314 只差一个字符（`…workspace roo` → `…workspace root`），但**等长替换立刻证伪了长度假设**：
+
+| 314 字符的变体 | 结果 |
+|---|---|
+| 原样（结尾 `root`） | 400 |
+| `root` → `base`（等长） | 200 |
+| `root` → `xxxx`（等长） | 200 |
+| 313 字符 + 补空格（回到 314） | 200 |
+| 大写 `ROOT` | 400 |
+
+等长掩码出现「两半分别都 200、整段才 400」，说明触发点跨在分界线上，顺着边界拼出整句：
+
+```
+Relative paths resolve from the workspace root
+```
+
+来自 `@deepseek-ai/dsh-file-reference`，**所有会话都带**，与 agent preset 无关。
+
+### 9.3 反证：句子级规则，不是词表
+
+| 构造 | 结果 |
+|---|---|
+| `hello workspace root bye` | 200 |
+| `"a"×300 + " workspace root"` | 200 |
+| 整句夹在填充文本里 | 200 |
+
+同一句话单独放进去不触发，只有在真实 prompt 里触发。所以**判断「是不是它」只能用反向验证**：改词 → 200、改另一个词 → 200、删整句 → 200，三条都成立才算锁定。
+
+### 9.4 改动
+
+```ts
+const PROMPT_FINGERPRINTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/Relative paths resolve from the workspace root/gu, 'Relative paths resolve against the workspace directory'],
+]
+```
+
+改写后语义不变（相对路径照样解析，只是换了个目录名）。验证方式是用**产物自己的** `prepareCnChatBody` 处理真实 body 再发 → 200。
+
+同时修正了一个早已过时的测试：`leaves a fingerprint that is not at the start of the prompt alone` 断言句中身份句原样保留，但 0.7.12 的产品名全文替换必然改它。
+
+### 9.5 可复用的排查工具
+
+抓包、复现、二分这套流程已固化成技能 `dsh-workbuddy-connect`，含三个脚本（打点 / 重现 / 二分）。下一轮出现新指纹时按那套流程走，不必重新摸索。
