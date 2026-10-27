@@ -22,7 +22,9 @@ This repository has merged the upstream fix branch [`fix/channel-identity-opener
 
 **0.7.13 (DSH 0.2.1-rc.3)**: DSH decides compatibility by comparing the plugin's `engines.dsh` — or, when that is absent, every `@deepseek-ai/dsh*` entry in `peerDependencies` — against the running core, and refuses the install or the startup with `incompatible-version` when any requirement is unmet. The peers were pinned to an exact `0.2.1-rc.2`, so the rc.3 upgrade rejected the whole package. Both are now `^0.2.1-rc.2`, which admits rc.2 and rc.3 without crossing into 0.3.
 
-**Version note**: `latest` on npm is still 0.7.9; these fixes live only on the repository's `main` (0.7.13). To use them now, install from this repository with the `github:` command in the Install section; when GitHub is unreachable, use the local tarball instead (see below).
+**0.7.14 (channel check, second round)**: 11128 came back on 2026-10-27 with nothing to do with the product name. Bisecting a captured 49 KB request body put the trigger on a single clause contributed by `@deepseek-ai/dsh-file-reference` — `Relative paths resolve from the workspace root` — which the gateway matches as a whole **sentence**. Changing any word in it (`resolve` to `map`, `workspace` to `dir`) or dropping the clause makes the identical body answer 200; `workspace root` on its own, or the same words padded with filler, does not trigger it, so this is a sentence-level rule rather than a word list. It is now rewritten to `Relative paths resolve against the workspace directory`, with the meaning unchanged.
+
+**Version note**: `latest` on npm is still 0.7.9; these fixes live only on the repository's `main` (0.7.14). To use them now, install from this repository with the `github:` command in the Install section; when GitHub is unreachable, use the local tarball instead (see below).
 
 This repository's `main` is now one merge commit ahead of upstream; when syncing upstream later, avoid a hard reset so the fix is not lost.
 
@@ -38,8 +40,8 @@ The plugin version must match the DSH core — a mismatch is rejected as `incomp
 
 | DSH core | Plugin version |
 |---|---|
-| `0.2.1-rc.3` | `0.7.13` (this repository's `main`) |
-| `0.2.1-rc.2` | `0.7.13` / `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
+| `0.2.1-rc.3` | `0.7.14` (this repository's `main`) |
+| `0.2.1-rc.2` | `0.7.14` / `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -53,13 +55,13 @@ Run this with the **`dsh` bundled in the desktop app's runtime**, not a standalo
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **`latest` on npm is still `0.7.9`, which contains neither the 2026-10-21 channel-check fix nor the rc.3 adaptation.** The command above installs `0.7.13` from this repository's `main`.
+- **`latest` on npm is still `0.7.9`, which contains neither the 2026-10-21 channel-check fix nor the rc.3 adaptation.** The command above installs `0.7.14` from this repository's `main`.
 - Package names are unique within a profile: the command **replaces** an already installed copy rather than adding a second one. To return to the npm build: `dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`.
 - Fully quit and restart the app afterwards — the plugin is loaded at startup.
 - The `github:` specifier is resolved by pnpm through `git ls-remote`; when GitHub is unreachable you get `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`. **Install from a local tarball instead — no network needed:**
 
   ```sh
-  # In this repository (runs the tsdown build), producing dsh-workbuddy-connect-0.7.13.tgz
+  # In this repository (runs the tsdown build), producing dsh-workbuddy-connect-0.7.14.tgz
   pnpm install && pnpm pack
 
   # Remove the git-sourced entry first, or pnpm still tries to reach GitHub
@@ -82,7 +84,7 @@ dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 ```
 
-> Web / TUI can also install `0.7.13` from `github:AidenOrz/dsh-workbuddy-connect`, but this repository is only verified on Desktop.
+> Web / TUI can also install `0.7.14` from `github:AidenOrz/dsh-workbuddy-connect`, but this repository is only verified on Desktop.
 > TUI version pairing: the terminal shell `@deepseek-harness-tui/dsh-tui` must be `0.10.0-beta.5` or newer — older versions fail at startup with this plugin installed (`events is not iterable`); manual reasoning-level detection exists on Web / Desktop only, not TUI.
 
 ### Verify
@@ -201,8 +203,8 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 | DSH core | Recommended plugin | Notes |
 |---|---|---|
-| `0.2.1-rc.3` | `0.7.13` | Declares `engines.dsh: ^0.2.1-rc.2`, so the rc.2 and rc.3 lines both pass DSH's compatibility gate. |
-| `0.2.1-rc.2` | `0.7.13` (or `0.7.9` from npm) | `0.2.0-rc.2` and `0.2.1-rc.2` differ; check the core bundled in your Desktop app. |
+| `0.2.1-rc.3` | `0.7.14` | Declares `engines.dsh: ^0.2.1-rc.2`, so the rc.2 and rc.3 lines both pass DSH's compatibility gate. |
+| `0.2.1-rc.2` | `0.7.14` (or `0.7.9` from npm) | `0.2.0-rc.2` and `0.2.1-rc.2` differ; check the core bundled in your Desktop app. |
 | `0.2.1-rc.1` | `0.7.7` | The core moved to `@earendil-works/pi-ai` 1.3.0, so the plugin bundles 1.3.0 too — a leftover 0.87.1 overrides entry must be removed (see the pi-ai note below). |
 | `0.2.0-rc.2` | `0.7.6` | Previous core line; fixes enterprise catalog gaps and international chat requests blocked by the upstream channel check. Avoid 0.7.2 with its registry regression. |
 | `0.2.0-rc.1` | `0.7.0` | 0.7.1 drops rc.1 support; stay on this version. |
@@ -212,6 +214,7 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 Release history (full records at [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)):
 
+- **0.7.14**: fixes a second channel-check fingerprint. The gateway matches the whole sentence `Relative paths resolve from the workspace root` (contributed by `@deepseek-ai/dsh-file-reference`); it is now rewritten to `Relative paths resolve against the workspace directory`. Found by bisecting a captured 49 KB request body after `HTTP 400 / code 11128` returned with every earlier fingerprint already neutralized.
 - **0.7.13**: adapts to DSH 0.2.1-rc.3 — `engines.dsh` / peer ranges widened to `^0.2.1-rc.2` so the rc.3 core no longer rejects the package as `incompatible-version`.
 - **0.7.12**: fixes the Windows channel-check failure: the product name is neutralized everywhere in system messages (previously only the opener), and the real client version plus the bundled CLI version are read on Windows, restoring the `CLI/…` UA segment.
 - **0.7.11**: widens the channel-fingerprint rewrite to the per-model identity line (`You are a coding agent powered by <model> model.`, dotted model names included) and neutralizes every identity line stacked at the top of one system message; fixes the `HTTP 400 / code 11128` still seen after 0.7.10.

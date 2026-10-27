@@ -4,7 +4,7 @@
 # 天下没有不散的宴席？
 ## 分支合并通知
 
-本仓库已合并上游修复分支 [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，作者 [@Elycheng](https://github.com/Elycheng)），合并提交 `0c9b269`；此后又修了两轮，并适配了 DSH `0.2.1-rc.3`，现为 **0.7.13**。
+本仓库已合并上游修复分支 [`fix/channel-identity-opener`](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)（PR [#204](https://github.com/corrinehu/dsh-workbuddy-connect/pull/204)，作者 [@Elycheng](https://github.com/Elycheng)），合并提交 `0c9b269`；此后又修了三轮，并适配了 DSH `0.2.1-rc.3`，现为 **0.7.14**。
 
 **起因**：2026 年 10 月 20 日起，国内网关会拦下带 DSH 客户端特征的请求，返回 `HTTP 400 / code 11128`（「请求被拦截，请重新发送」），WorkBuddy 分组下的模型全部不可用，而官方 App 正常。
 
@@ -14,12 +14,13 @@
 - **0.7.11**：补上紧随其后的 `You are a coding agent powered by <模型> model.`（模型名含点号），并处理开头连续堆叠的多条身份句；
 - **0.7.12**：校验实际是**全文扫描**——DSH 每轮追加的 runtime context 含十余处 `DeepSeek Harness`，现统一改写为 `the agent runtime`（user 消息不动）；同时修正 Windows 上读不到真实客户端版本的问题，UA 恢复为 `WorkBuddy/<应用版本> WorkBuddy/<应用版本> CLI/<CLI 版本>`。
 - **0.7.13**：适配 DSH `0.2.1-rc.3`。DSH 用插件的 `engines.dsh`（没写则用 `peerDependencies` 里所有 `@deepseek-ai/dsh*`）与运行时版本比对，任一不满足就判 `incompatible-version` **拒绝安装/拒绝启动**；原先 peer 钉在精确的 `0.2.1-rc.2`，rc.3 一升级就整包不可用。现改为 `engines.dsh: ^0.2.1-rc.2` 且 peer 用同一条 caret 范围，rc.2 与 rc.3 都满足，又不跨到 0.3。
+- **0.7.14**：2026-10-27 起又出现 11128，但原因和产品名无关。抓包后对真实 49 KB 请求体做二分，定位到 `@deepseek-ai/dsh-file-reference` 贡献的一句话 `Relative paths resolve from the workspace root`——网关按**整句**匹配它。改句中的任意一个词（`resolve`→`map`、`workspace`→`dir`）或整句删掉，同一份请求体立即返回 200；而单独出现 `workspace root`、或把它夹在填充文本里都不触发，所以这是句子级规则而非词表。现改写为 `Relative paths resolve against the workspace directory`，语义不变。
 
 完整排查过程、验证数据与已知副作用见 [`docs/channel-check-fix.md`](./docs/channel-check-fix.md)。
 
 **需要注意**：这是针对上游渠道校验的字节级兼容改写，属于「猫鼠游戏」，上游调整校验维度后可能需要重新适配；checkout 路径也会被一并改写，模型若需读取该路径会失败。账号与接入风险仍按文末「免责声明」由使用者自行承担。
 
-**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，上述修复只存在于仓库 `main`（0.7.13）上；要用请按「安装」章节里的 `github:` 命令从本仓库安装，GitHub 不通时可用本地 tgz（见下）。
+**版本说明**：npm 上的 `latest` 目前仍是 0.7.9，上述修复只存在于仓库 `main`（0.7.14）上；要用请按「安装」章节里的 `github:` 命令从本仓库安装，GitHub 不通时可用本地 tgz（见下）。
 
 本仓库 `main` 现已领先上游若干提交；后续同步上游时请不要直接硬重置，以免丢掉这些修复。
 
@@ -35,8 +36,8 @@
 
 | DSH 内核 | 插件版本 |
 |---|---|
-| `0.2.1-rc.3` | `0.7.13`（本仓库 `main`） |
-| `0.2.1-rc.2` | `0.7.13` / `0.7.12`（本仓库 `main`）／`0.7.9`（npm） |
+| `0.2.1-rc.3` | `0.7.14`（本仓库 `main`） |
+| `0.2.1-rc.2` | `0.7.14` / `0.7.12`（本仓库 `main`）／`0.7.9`（npm） |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -50,13 +51,13 @@
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复，也不含 rc.3 适配**。上面这条命令从本仓库 `main` 安装 `0.7.13`。
+- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复，也不含 rc.3 适配**。上面这条命令从本仓库 `main` 安装 `0.7.14`。
 - 同一 profile 内包名唯一：这条命令会**替换**已装的同名插件，不会并存。回退到 npm 版：`dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`。
 - 装完必须**完全退出并重启** App，插件只在启动时加载。
 - `github:` 源由 pnpm 调 `git ls-remote` 解析，GitHub 不可达会报 `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`。**这时改成装本地 tgz，全程不走网络**：
 
   ```sh
-  # 在本仓库目录里打包（会触发 tsdown 构建），产出 dsh-workbuddy-connect-0.7.13.tgz
+  # 在本仓库目录里打包（会触发 tsdown 构建），产出 dsh-workbuddy-connect-0.7.14.tgz
   pnpm install && pnpm pack
 
   # 先摘掉旧的 git 源条目，否则 pnpm 仍会去拉 GitHub
@@ -79,7 +80,7 @@ dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 ```
 
-> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 装 `0.7.13`，但本仓库只在桌面版实测过。
+> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 装 `0.7.14`，但本仓库只在桌面版实测过。
 > TUI 版本搭配：终端壳 `@deepseek-harness-tui/dsh-tui` 需 `0.10.0-beta.5` 及以上，更早版本装本插件会启动失败（`events is not iterable`）；推理档位的手动检测仅 Web / Desktop 提供，TUI 没有。
 
 ### 验证

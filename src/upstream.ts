@@ -624,9 +624,33 @@ const PRODUCT_NAME_PATTERN = /DeepSeek Harness/gu
 /** Neutral stand-in for {@link PRODUCT_NAME_PATTERN}; keeps the sentence grammatical. */
 const NEUTRAL_PRODUCT_NAME = 'the agent runtime'
 
-/** Scrub the product name from one system/developer string. */
-function scrubProductName(text: string): string {
-  return text.replace(PRODUCT_NAME_PATTERN, NEUTRAL_PRODUCT_NAME)
+/**
+ * Sentences the channel check matches **verbatim** inside a system message.
+ *
+ * Measured 2026-10-27: a DSH `0.2.1-rc.3` session on `deepseek-v4.1-flash`
+ * answered 400 / code 11128 with every earlier fingerprint already neutralized.
+ * Bisecting the captured body put the trigger on this one clause, contributed
+ * by `@deepseek-ai/dsh-file-reference`: changing any word in it — `resolve` to
+ * `map`, `workspace` to `dir`, or dropping the clause outright — makes the same
+ * 49 KB body succeed. The substitution keeps the instruction's meaning: relative
+ * paths still resolve, just against a differently named directory.
+ *
+ * This is a sentence-level rule, not a word list: `workspace root` alone, and
+ * the same words padded with filler text, both pass. Expect the list to grow —
+ * it is the same cat-and-mouse shape as {@link PRODUCT_NAME_PATTERN}.
+ */
+const PROMPT_FINGERPRINTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/Relative paths resolve from the workspace root/gu, 'Relative paths resolve against the workspace directory'],
+]
+
+/**
+ * Scrub every fingerprint the channel check objects to from one system string:
+ * the product name anywhere, plus the sentences listed above.
+ */
+function scrubChannelPhrases(text: string): string {
+  let out = text.replace(PRODUCT_NAME_PATTERN, NEUTRAL_PRODUCT_NAME)
+  for (const [pattern, replacement] of PROMPT_FINGERPRINTS) out = out.replace(pattern, replacement)
+  return out
 }
 
 /**
@@ -679,7 +703,7 @@ function neutralizeChannelIdentity(obj: Record<string, unknown>): void {
     if (role !== 'system' && role !== 'developer') continue
     const content = wrapped['content']
     if (typeof content === 'string') {
-      wrapped['content'] = scrubProductName(rewriteChannelIdentityLine(content))
+      wrapped['content'] = scrubChannelPhrases(rewriteChannelIdentityLine(content))
       continue
     }
     if (!Array.isArray(content)) continue
@@ -687,7 +711,7 @@ function neutralizeChannelIdentity(obj: Record<string, unknown>): void {
       if (typeof part !== 'object' || part === null || Array.isArray(part)) continue
       const wrappedPart = part as Record<string, unknown>
       if (wrappedPart['type'] !== 'text' || typeof wrappedPart['text'] !== 'string') continue
-      wrappedPart['text'] = scrubProductName(rewriteChannelIdentityLine(wrappedPart['text']))
+      wrappedPart['text'] = scrubChannelPhrases(rewriteChannelIdentityLine(wrappedPart['text']))
     }
   }
 }

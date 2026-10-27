@@ -114,15 +114,19 @@ describe('channel fingerprint neutralization', () => {
     expect(message?.['content']).toBe('You are an AI agent.')
   })
 
-  it('leaves a fingerprint that is not at the start of the prompt alone', () => {
-    // Prose before the sentence passes the channel check, so there is nothing
-    // to neutralize and the prompt must not be touched.
+  it('leaves an identity sentence that is not at the start alone, but still scrubs the product name', () => {
+    // The opener rewrite is anchored, so prose before the sentence means the
+    // sentence itself is untouched. The product-name scan added later is a
+    // full-text one (measured: the runtime context repeats the name a dozen
+    // times mid-prompt and the gateway rejects it), so the name inside that
+    // untouched sentence is still replaced.
     const text = `Answer briefly.\n\n${FINGERPRINT}\n\nReply with ok.`
     const prepared = prepareCnChatBody(JSON.stringify({
       model: 'hy3',
       messages: [{ role: 'system', content: text }, { role: 'user', content: 'hi' }],
     }))
-    expect(messagesOf(prepared)[0]?.['content']).toBe(text)
+    expect(messagesOf(prepared)[0]?.['content'])
+      .toBe('Answer briefly.\n\nYou are an AI agent powered by the agent runtime.\n\nReply with ok.')
   })
 
   it('rewrites the per-model coding-agent sentence when it opens the message', () => {
@@ -164,6 +168,40 @@ describe('channel fingerprint neutralization', () => {
       .toBe('Be brief.\n\nCurrent the agent runtime implementation checkout: "C:\\app\\the agent runtime\\dsh\\".')
     // User turns are the user's own words and stay byte-identical.
     expect(messages[1]?.['content']).toBe(userText)
+  })
+
+  it('rewrites the file-reference sentence the check matches verbatim', () => {
+    // Measured 2026-10-27: with every earlier fingerprint neutralized, a real
+    // 49 KB DSH request on `deepseek-v4.1-flash` still answered 400 / 11128.
+    // Bisecting the captured body put the trigger on this one clause from
+    // `@deepseek-ai/dsh-file-reference`; changing any word in it — or dropping
+    // the clause — made the identical body succeed.
+    const system = 'Be brief.\n\nRelative paths resolve from the workspace root; absolute paths identify files.'
+    const userText = 'Relative paths resolve from the workspace root — 这句会被拦吗？'
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'deepseek-v4.1-flash',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userText },
+      ],
+    }))
+    const messages = messagesOf(prepared)
+    expect(messages[0]?.['content'])
+      .toBe('Be brief.\n\nRelative paths resolve against the workspace directory; absolute paths identify files.')
+    // Only the exact sentence is rewritten; the user's own words stay put.
+    expect(messages[1]?.['content']).toBe(userText)
+  })
+
+  it('leaves the same words alone when they are not that exact sentence', () => {
+    // A word list would have caught these; the measurement says it is the
+    // clause, so a session that merely mentions a workspace root must pass
+    // through byte-identical.
+    const system = 'The build writes into a workspace root directory.\nRelations resolve from the workspace.'
+    const prepared = prepareCnChatBody(JSON.stringify({
+      model: 'deepseek-v4.1-flash',
+      messages: [{ role: 'system', content: system }],
+    }))
+    expect(messagesOf(prepared)[0]?.['content']).toBe(system)
   })
 
   it('leaves an unanchored model sentence and a Claude phrasing alone', () => {
