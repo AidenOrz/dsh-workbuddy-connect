@@ -134,10 +134,13 @@ describe('resolveAppVersion', () => {
   })
 
   it('still answers when the cache cannot be written', async () => {
-    // A read-only home must not take the catalog down with it.
+    // A file as the parent guarantees ENOTDIR on every platform, even as root.
+    // A /proc fixture is not portable and recursive mkdir can hang on Node 24.
+    const blocked = await tempPath()
+    await writeFile(blocked, 'not a directory')
     await expect(resolveAppVersion({
       installed: async () => ({ version: '5.5.2', bundle: '/x' }),
-      path: '/proc/definitely-not-writable/version.json',
+      path: join(blocked, 'version.json'),
     })).resolves.toMatchObject({ version: '5.5.2', source: 'installed' })
   })
 

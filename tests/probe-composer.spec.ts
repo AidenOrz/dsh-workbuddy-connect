@@ -31,14 +31,14 @@ describe('Composer model probe', () => {
   const directory = {
     getSnapshot: () => state,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
-  } as WorkBuddyProbeControlProps['directory']
+  } satisfies WorkBuddyProbeControlProps['directory']
   const t: WorkBuddyProbeControlProps['t'] = (key, params = {}) =>
     Object.entries(params).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), en[key] as string)
 
   function select(nextProvider: string, nextModel: string) {
     provider = nextProvider
     model = nextModel
-    state = { current: { provider, model }, status: 'ready', groups: [], failures: [], error: null, routable: true }
+    state = { current: { provider, model }, status: 'ready', pending: null, groups: [], failures: [], error: null, routable: true }
     listeners.forEach(listener => listener())
   }
 

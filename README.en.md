@@ -36,12 +36,13 @@ Brings the models available in your signed-in WorkBuddy / WorkBuddy AI desktop a
 
 **Prerequisite**: the WorkBuddy (CN) or WorkBuddy AI desktop app is installed and signed in on this machine. The plugin reuses the app's sign-in state and follows account switches automatically; the two never affect each other.
 
-The plugin version must match the DSH core — a mismatch is rejected as `incompatible-version`, at install time or at startup — and the Desktop app picks its plugin version by the bundled core. This repository is verified on **DSH `0.2.1-rc.2` / `0.2.1-rc.3`** (Node 22+, pnpm 11):
+The plugin version must match the DSH core — a mismatch is rejected as `incompatible-version`, at install time or at startup — and the Desktop app picks its plugin version by the bundled core. The current source targets **DSH `0.2.1-rc.5`** exactly and uses **`@earendil-works/pi-ai` 1.4.0**. Older cores require their historical plugin revision instead of the current `main`. Linux Web typechecks, build, regression tests and one live GLM request have been verified for rc.5; Windows/macOS Desktop has not been retested. See [rc.5 compatibility notes](docs/rc5-compatibility.md).
 
 | DSH core | Plugin version |
 |---|---|
-| `0.2.1-rc.3` | `0.7.14` (this repository's `main`) |
-| `0.2.1-rc.2` | `0.7.14` / `0.7.12` (this repository's `main`) / `0.7.9` (npm) |
+| `0.2.1-rc.5` | Current source `0.7.15` (rc.5 only) |
+| `0.2.1-rc.3` | `0.7.14` (historical revision) |
+| `0.2.1-rc.2` | `0.7.14` / `0.7.12` (historical revision) / `0.7.9` (npm) |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -55,13 +56,13 @@ Run this with the **`dsh` bundled in the desktop app's runtime**, not a standalo
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **`latest` on npm is still `0.7.9`, which contains neither the 2026-10-21 channel-check fix nor the rc.3 adaptation.** The command above installs `0.7.14` from this repository's `main`.
+- **`latest` on npm is still `0.7.9`, which contains neither the 2026-10-21 channel-check fix nor the rc.3 adaptation.** The command above installs the current source from `main`, for the matching rc.5 core only.
 - Package names are unique within a profile: the command **replaces** an already installed copy rather than adding a second one. To return to the npm build: `dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`.
 - Fully quit and restart the app afterwards — the plugin is loaded at startup.
 - The `github:` specifier is resolved by pnpm through `git ls-remote`; when GitHub is unreachable you get `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`. **Install from a local tarball instead — no network needed:**
 
   ```sh
-  # In this repository (runs the tsdown build), producing dsh-workbuddy-connect-0.7.14.tgz
+  # In this repository (runs the tsdown build), producing dsh-workbuddy-connect-0.7.15.tgz
   pnpm install && pnpm pack
 
   # Remove the git-sourced entry first, or pnpm still tries to reach GitHub

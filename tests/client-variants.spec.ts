@@ -141,10 +141,10 @@ describe('composer control provider routing', () => {
   const directory = {
     getSnapshot: () => state,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
-  } as WorkBuddyProbeControlProps['directory']
+  } satisfies WorkBuddyProbeControlProps['directory']
 
   function select(provider: string, model: string): void {
-    state = { current: { provider, model }, status: 'ready', groups: [], failures: [], error: null, routable: true }
+    state = { current: { provider, model }, status: 'ready', pending: null, groups: [], failures: [], error: null, routable: true }
     listeners.forEach(listener => listener())
   }
 

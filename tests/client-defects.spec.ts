@@ -517,10 +517,10 @@ describe('WorkBuddyProbeControl', () => {
   const directory = {
     getSnapshot: () => state,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
-  } as WorkBuddyProbeControlProps['directory']
+  } satisfies WorkBuddyProbeControlProps['directory']
 
   beforeEach(() => {
-    state = { current: { provider: 'workbuddy', model: 'glm-5.2' }, status: 'ready', groups: [], failures: [], error: null, routable: true }
+    state = { current: { provider: 'workbuddy', model: 'glm-5.2' }, status: 'ready', pending: null, groups: [], failures: [], error: null, routable: true }
   })
 
   afterEach(() => {

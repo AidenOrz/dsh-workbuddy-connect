@@ -23,6 +23,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
@@ -42,19 +43,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'settings.workbuddy': WorkBuddySettingsKey
   }
   interface SlotMap {
-    /**
-     * Compile-time mirror of the shell's overlay seat (declared at runtime by
-     * the ui-layout AppFrame, which this bundle does not depend on): a list
-     * slot the shell renders over the whole app, click-through until an entry
-     * opts into pointer events. Hosts without the seat simply never fire the
-     * inject below. If a future dependency ships the real declaration, drop
-     * this mirror in its favour.
-     */
-    'shell.overlay': {
-      kind: 'list'
-      scope: 'root'
-      owner: WorkBuddyShellOverlayOwnerProps
-    }
     /**
      * Compile-time mirror of DSH 0.1.5's settings Plugins-tab seat.
      *
@@ -77,11 +65,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Owner share of the 0.1.5 settings-tab seat: the tab supplies nothing to entries. */
 interface WorkBuddyLegacySettingsCardOwnerProps {
-  children?: never
-}
-
-/** Owner share of the overlay seat: the frame supplies nothing to entries. */
-interface WorkBuddyShellOverlayOwnerProps {
   children?: never
 }
 
