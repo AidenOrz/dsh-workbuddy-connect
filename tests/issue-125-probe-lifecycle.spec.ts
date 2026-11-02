@@ -44,23 +44,25 @@ function sessionStore() {
   // object reference — the host's real store replaces the state on every
   // syncInputs, so the stand-in must too (mutating in place would freeze the
   // component at the first snapshot).
-  let state: {
-    current: { provider: string, model: string } | null | undefined
-    status: string
-    routable: boolean | null
-  } = { current: null, status: 'loading', routable: null }
+  let state: ReturnType<WorkBuddyProbeControlProps['directory']['getSnapshot']> = {
+    current: null, status: 'loading', routable: null,
+    pending: null, groups: [], failures: [], error: null,
+  }
   return {
     directory: {
       getSnapshot: () => state,
       subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
-    } as WorkBuddyProbeControlProps['directory'],
+    } satisfies WorkBuddyProbeControlProps['directory'],
     /** Land the session's projection, the way the host's syncInputs does. */
     arrive(current: { provider: string, model: string } | null | undefined): void {
       state = {
-        current,
+        current: current ?? null,
         status: current === null || current === undefined ? 'loading' : 'ready',
         routable: current == null ? null : true,
+        pending: null, groups: [], failures: [], error: null,
       }
+      // Deliberately inject an out-of-contract value for the defensive guard test.
+      if (current === undefined) Reflect.set(state, 'current', undefined)
       listeners.forEach(listener => listener())
     },
   }

@@ -42,7 +42,8 @@ import type { WorkBuddyWebProbeModel, WorkBuddyWebStatus } from '../status-paths
 
 /** Injected props; `directory` resolves the session's current model selection. */
 export interface WorkBuddyProbeControlProps extends WorkBuddyPluginCardInjected {
-  directory: ModelDirectory['store']
+  // The control only observes the host store; it never mutates model selection.
+  directory: Pick<ModelDirectory['store'], 'getSnapshot' | 'subscribe'>
 }
 
 /**
@@ -308,14 +309,9 @@ function tooltipText(
 export function WorkBuddyProbeControl({ directory, t }: WorkBuddyProbeControlProps) {
   const subscribe = useCallback((listener: () => void) => directory.subscribe(listener), [directory])
   const snapshot = useCallback(() => directory.getSnapshot(), [directory])
-  // The host's `ModelDirectoryState.current` is `ModelSelection | null` — null,
-  // never undefined, while the session's projection or the shared catalog is
-  // still loading (#125). The prop's type resolves to `any` here (the host's
-  // `SnapshotStore` module is not installed and `skipLibCheck` skips its
-  // re-export), so the runtime union is asserted once to keep the handling
-  // below checked.
-  const selection = useSyncExternalStore(subscribe, snapshot, snapshot).current as
-    { provider: string, model: string } | null | undefined
+  // rc.5 types current as ModelSelection | null. Keep the nullish runtime
+  // guard below for older or malformed hosts that may also yield undefined.
+  const selection = useSyncExternalStore(subscribe, snapshot, snapshot).current
   // A not-ready selection (`null`/`undefined`) renders nothing but KEEPS the
   // component mounted and subscribed: the directory store replaces its
   // snapshot once the session's projection lands, `useSyncExternalStore`

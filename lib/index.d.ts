@@ -5,7 +5,6 @@ import { PiAiAdapter, PiAiAdapterOptions } from "@deepseek-ai/dsh-llm-pi-ai";
 import { Context } from "@deepseek-ai/cordis";
 import { SettingsNamespace } from "@deepseek-ai/dsh-settings";
 import { AttachmentStore } from "@deepseek-ai/dsh-attachment";
-//#region src/status-paths.d.ts
 /**
  * Why no credential is usable, as a closed enum the browser half switches on.
  *
@@ -31,8 +30,6 @@ type WorkBuddySignedOutReasonCode =
 'electron-path-invalid' |
 /** Discovery could not finish: tool missing, timeout, output overflow, unreadable plist. */
 'electron-discovery-incomplete';
-//#endregion
-//#region src/app-version.d.ts
 /** Basename of the saved version under `$DSH_HOME`. */
 declare const WORKBUDDY_APP_VERSION_FILENAME = ".workbuddy-ai-version.json";
 /** Where the version came from, for `doctor` output. */
@@ -101,8 +98,6 @@ declare function resolveAppVersion(options?: ResolveAppVersionOptions): Promise<
  * version rather than sending a malformed header.
  */
 declare function appUserAgent(version: string): string;
-//#endregion
-//#region src/client-identity.d.ts
 /**
  * Compiled-in CN fallback for the `WorkBuddy/<v>` tokens.
  *
@@ -185,8 +180,6 @@ declare function resolveChatIdentity(region: WorkBuddyRegion, options?: ResolveC
  * bundle, or a missing cache all present this, never the legacy CLI UA.
  */
 declare function fallbackChatIdentity(region: WorkBuddyRegion): ChatIdentity;
-//#endregion
-//#region src/probe.d.ts
 /**
  * The canonical values a probe tests, in a fixed order.
  *
@@ -257,8 +250,6 @@ declare function probeModel(options: {
   /** Injected by tests to advance a virtual clock; defaults to `Date.now`. */
   now?: () => number;
 }): Promise<ProbeOutcome>;
-//#endregion
-//#region src/upstream.d.ts
 /** WorkBuddy region selected by the credential's login domain. */
 type WorkBuddyRegion = 'cn' | 'global';
 /** Upstream failure classes the shim maps onto distinct HTTP answers. */
@@ -697,8 +688,6 @@ declare function modelWithCurrentPromotion(model: WorkBuddyUpstreamModel, now?: 
  */
 declare function prepareCnChatBody(source: string): string;
 declare function prepareInternationalChatBody(source: string): string;
-//#endregion
-//#region src/variants.d.ts
 /** One WorkBuddy product variant. */
 interface WorkBuddyVariant {
   /** Provider id registered with DSH, e.g. `workbuddy-ai`. */
@@ -789,8 +778,6 @@ declare const CN_VARIANT: WorkBuddyVariant;
 declare const AI_VARIANT: WorkBuddyVariant;
 /** Look up a variant by provider id. */
 declare function variantFor(id: string): WorkBuddyVariant | undefined;
-//#endregion
-//#region src/desktop-credential-protection.d.ts
 /** The four states a desktop auth document can be read as. */
 type DesktopAuthFormat = 'absent' | 'plaintext' | 'encrypted' | 'unrecognized';
 /** The spawned helper. Separated from the provider so tests can stand it in. */
@@ -993,8 +980,6 @@ declare class WorkBuddyAtRestKeyProvider {
   private spawnPayload;
   private spawnAt;
 }
-//#endregion
-//#region src/auth.d.ts
 /** Normalized WorkBuddy credential, timestamps in epoch milliseconds. */
 interface WorkBuddyCredential {
   accessToken: string;
@@ -1166,8 +1151,6 @@ declare class WorkBuddyCredentialStore {
   /** Whether any desktop-file candidate exists as a regular file; diagnostics only. */
   desktopFilePresent(): Promise<boolean>;
 }
-//#endregion
-//#region src/catalog.d.ts
 /** One model entry the adapter exposes. */
 type WorkBuddyModelInfo = WorkBuddyUpstreamModel;
 /**
@@ -1248,8 +1231,6 @@ declare class WorkBuddyCatalog {
   /** Models to fall back to when the upstream fetch fails; ignores visibility. */
   fallback(): readonly WorkBuddyModelInfo[];
 }
-//#endregion
-//#region src/probe-store.d.ts
 /** Basename of the probe record inside the Harness home. */
 declare const WORKBUDDY_PROBE_FILENAME = ".workbuddy-probe.json";
 /**
@@ -1360,8 +1341,6 @@ declare class WorkBuddyProbeStore {
    */
   private persist;
 }
-//#endregion
-//#region src/shim.d.ts
 /** Minimal logger surface the plugin context already provides. */
 interface ShimLogger {
   warn(...args: unknown[]): void;
@@ -1395,8 +1374,6 @@ interface WorkBuddyShimOptions {
  * is the boundary, and the upstream credential comes from the store alone.
  */
 declare function createWorkBuddyShim(options: WorkBuddyShimOptions): WorkBuddyShim;
-//#endregion
-//#region src/adapter.d.ts
 /** Provider route this bundle owns. */
 declare const WORKBUDDY_PROVIDER = "workbuddy";
 /** Provider idle ceiling while one stream read is outstanding. */
@@ -1463,8 +1440,6 @@ interface WorkBuddyAdapter {
  * `modelErrors` since 0.1.5-alpha.2 (#12).
  */
 declare function createWorkBuddyAdapter(options: WorkBuddyAdapterOptions): WorkBuddyAdapter;
-//#endregion
-//#region src/catalog-store.d.ts
 /** Basename of the CN variant's saved catalog inside the Harness home. */
 declare const WORKBUDDY_CATALOG_FILENAME = ".workbuddy-catalog.json";
 /** One saved catalog: the account it belonged to, and the models it listed. */
@@ -1513,8 +1488,6 @@ declare class WorkBuddyCatalogStore {
   delete(account: string): void;
   private persist;
 }
-//#endregion
-//#region src/visibility-store.d.ts
 /**
  * Per-account model-visibility preferences: which models the signed-in account
  * has hidden from the DSH model picker (issue #36).
@@ -1580,8 +1553,6 @@ declare class WorkBuddyVisibilityStore {
   setVisible(account: string, model: string, visible: boolean): void;
   private persist;
 }
-//#endregion
-//#region src/probe-service.d.ts
 /** What the caller learns about a completed probe. */
 type WorkBuddyProbeStatus = {
   state: 'ok';
@@ -1650,8 +1621,6 @@ declare class WorkBuddyProbeService {
    */
   probe(modelId: string, manualConsent?: boolean): Promise<WorkBuddyProbeStatus>;
 }
-//#endregion
-//#region src/host-heartbeat.d.ts
 /**
  * Host-side heartbeat: a small JSON file written under `$DSH_HOME` once the
  * `workbuddy` provider is registered. The status CLI reads it to report
@@ -1716,8 +1685,6 @@ declare function processStartTimeMs(pid: number): number | undefined;
  * (e.g. unsupported platform) the check degrades to plain PID liveness.
  */
 declare function isHeartbeatProcessAlive(heartbeat: WorkBuddyHostHeartbeat): boolean;
-//#endregion
-//#region src/index.d.ts
 /** Stable Cordis plugin name. */
 declare const name = "llm-workbuddy";
 /** The model registry required before the provider can register. */
@@ -1803,5 +1770,4 @@ declare function visibilityAccountOf(credential: Pick<WorkBuddyCredential, 'uid'
  * working without re-registering the provider.
  */
 declare function apply(ctx: Context, config: Config): void;
-//#endregion
 export { AI_VARIANT, type AppVersionInfo, CN_APP_VERSION_FILENAME, CN_VARIANT, type ChatIdentity, Config, FALLBACK_CN_APP_VERSION, FALLBACK_WORKBUDDY_AI_MODELS, FALLBACK_WORKBUDDY_MODELS, PROBE_EFFORT_CANDIDATES, type ProbeAttempt, type ProbeOutcome, type ProbeSender, type ResolveChatIdentityOptions, type UpstreamErrorKind, WORKBUDDY_AI_SETTINGS_NS, WORKBUDDY_APP_VERSION_FILENAME, WORKBUDDY_AUTH_FILENAME, WORKBUDDY_AUTH_FILE_ENV, WORKBUDDY_CATALOG_FILENAME, WORKBUDDY_HOST_HEARTBEAT_FILENAME, WORKBUDDY_PROBE_FILENAME, WORKBUDDY_PROVIDER, WORKBUDDY_SETTINGS_NS, WORKBUDDY_STREAM_IDLE_TIMEOUT_MS, WORKBUDDY_VARIANTS, WORKBUDDY_VISIBILITY_FILENAME, type WorkBuddyAdapter, type WorkBuddyAppVersionSource, type WorkBuddyAuthStatus, WorkBuddyCatalog, type WorkBuddyCatalogFetch, WorkBuddyCatalogStore, type WorkBuddyChatResult, type WorkBuddyCredential, WorkBuddyCredentialStore, type WorkBuddyCredits, type WorkBuddyEffort, type WorkBuddyHostHeartbeat, type WorkBuddyModelBilling, type WorkBuddyModelInfo, type WorkBuddyModelReasoning, type WorkBuddyProbeRecord, WorkBuddyProbeService, type WorkBuddyProbeStatus, WorkBuddyProbeStore, type WorkBuddyProbeValidation, type WorkBuddyPromotion, type WorkBuddyRefreshOutcome, type WorkBuddyShim, WorkBuddyUpstreamClient, type WorkBuddyUpstreamModel, type WorkBuddyVariant, WorkBuddyVisibilityStore, appUserAgent, apply, chatUserAgent, classifyUpstreamError, clearHostHeartbeat, createWorkBuddyAdapter, createWorkBuddyShim, defaultDesktopAuthCandidates, defaultDesktopAuthPath, desktopAuthCandidatesFor, fallbackChatIdentity, fingerprintModel, inject, installedAppVersion, isHeartbeatProcessAlive, modelWithCurrentPromotion, name, normalizeCredits, parseModelCatalog, parseWorkBuddyAuth, prepareChatBody, prepareCnChatBody, prepareInternationalChatBody, probeModel, processStartTimeMs, randomSentinel, readBundleVersion, readCliVersion, readHostHeartbeat, regionOf, resolveAppVersion, resolveChatIdentity, validAppVersion, validCliVersion, variantFor, visibilityAccountOf, workbuddyCatalogPath, workbuddyHostHeartbeatPath, workbuddyOwnAuthPath, workbuddyProbePath, workbuddyVisibilityPath };

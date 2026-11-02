@@ -32,12 +32,13 @@
 
 **前置**：本机已安装并登录 WorkBuddy（国内版）或 WorkBuddy AI 桌面 App。插件复用 App 的登录状态，账号切换自动跟随，两版互不影响。
 
-插件版本必须与 DSH 内核匹配，不匹配会被判定为 `incompatible-version` 而拒绝安装或拒绝启动；桌面版以 App 内置核心为准。本仓库在 **DSH `0.2.1-rc.2` / `0.2.1-rc.3`**（Node 22+、pnpm 11）上验证：
+插件版本必须与 DSH 内核匹配，不匹配会被判定为 `incompatible-version` 而拒绝安装或拒绝启动；桌面版以 App 内置核心为准。当前源码锁定 **DSH `0.2.1-rc.5`**，并使用 `@earendil-works/pi-ai` **1.4.0**；旧内核请安装对应的历史修订版，不要直接跟随 `main`。rc.5 已验证 Linux Web 的前后端类型检查、构建、回归测试及一次真实 GLM 请求；未重新验证 Windows/macOS Desktop。验证范围见 [rc.5 兼容说明](docs/rc5-compatibility.md)。
 
 | DSH 内核 | 插件版本 |
 |---|---|
-| `0.2.1-rc.3` | `0.7.14`（本仓库 `main`） |
-| `0.2.1-rc.2` | `0.7.14` / `0.7.12`（本仓库 `main`）／`0.7.9`（npm） |
+| `0.2.1-rc.5` | 当前源码 `0.7.15`（仅精确支持 rc.5） |
+| `0.2.1-rc.3` | `0.7.14`（历史修订版） |
+| `0.2.1-rc.2` | `0.7.14` / `0.7.12`（历史修订版）／`0.7.9`（npm） |
 | `0.2.1-rc.1` | `0.7.7` |
 | `0.2.0-rc.2` | `0.7.6` |
 | `0.2.0-rc.1` | `0.7.0` |
@@ -51,13 +52,13 @@
 dsh plugin --profile desktop add github:AidenOrz/dsh-workbuddy-connect
 ```
 
-- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复，也不含 rc.3 适配**。上面这条命令从本仓库 `main` 安装 `0.7.14`。
+- **npm 上的 `latest` 仍是 `0.7.9`，不含 2026-10-21 的渠道校验修复，也不含 rc.3 适配**。上面这条命令从本仓库 `main` 安装当前源码，仅用于匹配的 rc.5 内核。
 - 同一 profile 内包名唯一：这条命令会**替换**已装的同名插件，不会并存。回退到 npm 版：`dsh plugin --profile desktop add dsh-workbuddy-connect@0.7.9`。
 - 装完必须**完全退出并重启** App，插件只在启动时加载。
 - `github:` 源由 pnpm 调 `git ls-remote` 解析，GitHub 不可达会报 `ERR_PNPM_GIT_RESOLVE_FAILED` / `CONNECT tunnel failed`。**这时改成装本地 tgz，全程不走网络**：
 
   ```sh
-  # 在本仓库目录里打包（会触发 tsdown 构建），产出 dsh-workbuddy-connect-0.7.14.tgz
+  # 在本仓库目录里打包（会触发 tsdown 构建），产出 dsh-workbuddy-connect-0.7.15.tgz
   pnpm install && pnpm pack
 
   # 先摘掉旧的 git 源条目，否则 pnpm 仍会去拉 GitHub
@@ -80,7 +81,7 @@ dsh plugin --profile dsh-tui add dsh-workbuddy-connect@0.6.5
 dsh --profile dsh-tui
 ```
 
-> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 装 `0.7.14`，但本仓库只在桌面版实测过。
+> Web / TUI 也可以用 `github:AidenOrz/dsh-workbuddy-connect` 安装当前源码（仅 rc.5）；本次新增验证覆盖 Linux Web，TUI 尚未重新验证。
 > TUI 版本搭配：终端壳 `@deepseek-harness-tui/dsh-tui` 需 `0.10.0-beta.5` 及以上，更早版本装本插件会启动失败（`events is not iterable`）；推理档位的手动检测仅 Web / Desktop 提供，TUI 没有。
 
 ### 验证

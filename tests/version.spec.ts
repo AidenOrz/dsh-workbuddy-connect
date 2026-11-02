@@ -71,7 +71,7 @@ describe('peer manifest pins the verified DSH cores', () => {
    * means editing this list after a real run, not letting a caret do it.
    * Since 0.7.7 the list was 0.2.1-rc.1 alone: 0.2.0-rc.2 cannot be
    * smoke-tested anymore alongside it, and an untested arm is support
-   * nobody verified. This candidate targets 0.2.1-rc.2 and bundles the
+   * nobody verified. This candidate targets 0.2.1-rc.5 and bundles the
    * official atomic-write helper. Local checks do not replace Desktop
    * acceptance testing.
    *
@@ -94,12 +94,19 @@ describe('peer manifest pins the verified DSH cores', () => {
     '@deepseek-ai/dsh-settings',
   ] as const
 
+  it('engines.dsh admits only the verified rc.5 host', () => {
+    const pkg = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { engines: { dsh: string } }
+    expect(pkg.engines.dsh).toBe('0.2.1-rc.5')
+  })
+
   it('each DSH service peer is an exact, caret-free list of verified cores', () => {
     const pkg = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { peerDependencies: Record<string, string> }
     for (const name of DSH_SERVICE_PEERS) {
-      expect(pkg.peerDependencies[name], `${name} missing from peerDependencies`).toBe('0.2.1-rc.2')
+      expect(pkg.peerDependencies[name], `${name} missing from peerDependencies`).toBe('0.2.1-rc.5')
     }
   })
 
@@ -109,7 +116,7 @@ describe('peer manifest pins the verified DSH cores', () => {
     const pkg = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { peerDependencies: Record<string, string>, devDependencies: Record<string, string> }
-    expect(pkg.devDependencies['@deepseek-ai/dsh-atomic-write']).toBe('0.2.1-rc.2')
+    expect(pkg.devDependencies['@deepseek-ai/dsh-atomic-write']).toBe('0.2.1-rc.5')
     expect(pkg.peerDependencies['@deepseek-ai/dsh-atomic-write']).toBeUndefined()
   })
 
@@ -127,13 +134,13 @@ describe('peer manifest pins the verified DSH cores', () => {
     // pi-ai at the profile root wins bare-specifier resolution and the plugin
     // loads the wrong generation. A regular dependency installs beside the
     // plugin and resolves first, whatever the profile root holds.
-    expect(pkg.dependencies?.['@earendil-works/pi-ai']).toBe('1.3.0')
+    expect(pkg.dependencies?.['@earendil-works/pi-ai']).toBe('1.4.0')
     expect(
       pkg.peerDependencies['@earendil-works/pi-ai'],
       'pi-ai must not also be a peer: a peer declaration is what allowed the hoisted copy to win',
     ).toBeUndefined()
     // The dev entry keeps local builds and tests on the same generation, and
     // stays exact so no caret can widen the supported set by itself.
-    expect(pkg.devDependencies['@earendil-works/pi-ai']).toBe('1.3.0')
+    expect(pkg.devDependencies['@earendil-works/pi-ai']).toBe('1.4.0')
   })
 })
