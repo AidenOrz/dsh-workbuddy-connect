@@ -27,14 +27,28 @@ export const WORKBUDDY_PROVIDER = 'workbuddy'
 export const WORKBUDDY_STREAM_IDLE_TIMEOUT_MS = 300_000
 
 /**
- * Image-request budgets at the dsh-llm-pi-ai defaults; the profile type made
- * them required in 0.1.1-rc.2. They bound requests to models whose catalog
- * entry declares `supportsImages`; text-only models never receive images.
+ * Image-request budgets at the dsh-llm-pi-ai defaults. They bound requests to
+ * models whose catalog entry declares `supportsImages`; text-only models never
+ * receive images.
+ *
+ * The profile type only demanded three of these fields up to 0.2.1-rc.5, so a
+ * profile assembled by hand can silently omit the rest. Since 0.2.2 the host's
+ * `resolveImageRequestBudget` divides `maxRequestImageBytes` by
+ * `requestImageBudgetCount`; a missing divisor makes the per-image byte budget
+ * `NaN`, the host's `maxImageBytes < 1` guard lets `NaN` through, and every
+ * image-bearing request then dies in the attachment layer with
+ * `INVALID_ATTACHMENT_REF` (`Image request maxImageBytes must be a positive
+ * integer.`). Keep the complete set here instead of only the fields the oldest
+ * supported host type happens to require.
  */
-const REQUEST_IMAGE_BUDGETS = {
+export const REQUEST_IMAGE_BUDGETS = {
   maxRequestImageBytes: 20_971_520,
+  requestImageBudgetCount: 20,
+  maxRequestImages: 50,
+  imageOffloadCountQuantum: 10,
   requestImagePixelBudget: 4_194_304,
   requestImageMaxBytes: 1_048_576,
+  maxImageBytes: 1_048_576,
 } as const
 
 /**
